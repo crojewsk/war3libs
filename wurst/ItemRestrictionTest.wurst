@@ -4,12 +4,11 @@ import ItemRestriction
 init
     ItemRestriction WEAPON_1H = new ItemRestriction("1H Weapons", 2, null, false)
     ItemRestriction WEAPON_2H = new ItemRestriction("2H Weapons", 1, null, false)
-    UnitRequirement MELEE = new UnitRequirement(0, 0, 0, 0)
+    UnitRequirement MELEE = new UnitRequirement()
 
-    MELEE.getTypeIds().push('Hmkg')
-    //call MELEE.add('mlst').add('desc')
-    WEAPON_1H.add('desc')
-    WEAPON_2H.add('mlst')
+    MELEE.typeIds.push('Hmkg')
+    WEAPON_1H.addTypeId('desc')
+    WEAPON_2H.addTypeId('mlst')
     WEAPON_2H.addExclusive(WEAPON_1H)
     WEAPON_2H.addException(MELEE, 2)
 
@@ -21,3 +20,4 @@ init
     CreateItem('desc', 2733, -11062)
     CreateItem('desc', 2733, -11062)
     CreateItem('desc', 2733, -11062)
+    CreateItem('ckng', 2743, -11052)
