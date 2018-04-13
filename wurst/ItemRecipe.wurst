@@ -1,0 +1,424 @@
+/*
+*  ItemRecipe v1.0.0.0
+*     by Bannar
+*
+*  Powerful item recipe creator.
+*/
+package ItemRecipe
+import HashMap
+import LinkedList
+import ItemRestriction
+import InventoryEvent
+
+ItemRecipe eventRecipe = null
+unit eventUnit = null
+item eventItem = null
+HashMap<int, ItemData> eventRecipeData = null
+trigger eventAssemblingTrigger = CreateTrigger()
+trigger eventAssembledTrigger = CreateTrigger()
+boolean eventHandled = false
+
+public constant int EVENT_ITEM_RECIPE_ASSEMBLING = 0
+public constant int EVENT_ITEM_RECIPE_ASSEMBLED = 1
+
+public function getEventItemRecipe() returns ItemRecipe
+    return eventRecipe
+
+public function getEventItemRecipeUnit() returns unit
+    return eventUnit
+
+public function getEventItemRecipeItem() returns item
+    return eventItem
+
+public function getEventItemRecipeData() returns HashMap<int, ItemData>
+    return eventRecipeData
+
+public function setEventItemRecipeHandled(boolean flag)
+    eventHandled = flag
+
+public function registerItemRecipeEvent(int ev, code c)
+    if ev == EVENT_ITEM_RECIPE_ASSEMBLING
+        eventAssemblingTrigger.addCondition(Condition(c))
+    else
+        eventAssembledTrigger.addCondition(Condition(c))
+
+public function getInventoryEventTrigger(int whichEvent) returns trigger
+    if whichEvent == EVENT_ITEM_RECIPE_ASSEMBLING
+        return eventAssemblingTrigger
+    return eventAssembledTrigger
+
+function fireEvent(trigger evt, ItemRecipe recipe, unit u, item itm, HashMap<int, ItemData> recipeData)
+    ItemRecipe prevRecipe = eventRecipe
+    unit prevUnit = eventUnit
+    item prevItem = eventItem
+    let prevRecipeData = recipeData
+
+    eventRecipe = recipe
+    eventUnit = u
+    eventItem = itm
+    eventRecipeData = recipeData
+
+    evt.evaluate()
+
+    eventRecipe = prevRecipe
+    eventUnit = prevUnit
+    eventItem = prevItem
+    eventRecipeData = prevRecipeData
+
+let recipeMap = new HashMap<int, LinkedList<ItemRecipe>>()
+Table resultToRecipe = new Table()
+
+public class ItemData
+    int itemTypeId
+    boolean remove
+    int charges
+    int index
+
+    construct(int itemTypeId, boolean remove, int charges, int index)
+        this.itemTypeId = itemTypeId
+        this.remove = remove
+        this.charges = charges
+        this.index = index
+    
+    construct(thistype base)
+        this.itemTypeId = base.itemTypeId
+        this.remove = base.remove
+        this.charges = base.charges
+        this.index = base.index
+
+public class ItemRecipe
+    private LinkedList<ItemData> itemDatas
+    private int result
+    int charges
+    boolean ordered
+    boolean permanent
+    boolean pickUp
+    UnitRequirement requirement
+    private int abilityId
+    private int count
+    private boolean batch
+
+    construct(int result, int charges, boolean ordered, boolean permanent, boolean pickUp)
+        itemDatas = new LinkedList<ItemData>()
+        this.result = result
+        this.charges = charges
+        this.ordered = ordered
+        this.permanent = permanent
+        this.pickUp = pickUp
+        requirement = null
+        abilityId = 0
+
+        resultToRecipe.saveInt(result, this castTo int)
+
+    ondestroy
+        LinkedList<ItemRecipe> recipes
+        int itemTypeId
+
+        setAbility(0)
+        resultToRecipe.removeInt(result)
+
+        for data in itemDatas
+            itemTypeId = data.itemTypeId
+            recipes = recipeMap.get(itemTypeId)
+            recipes.remove(this)
+            if recipes.isEmpty()
+                destroy recipes
+                recipeMap.remove(itemTypeId)
+
+        destroy itemDatas
+
+    function count() returns int
+        return count
+
+    function inList(int itemTypeId) returns boolean
+        for data in itemDatas
+            if data.itemTypeId == itemTypeId
+                return true
+        return false
+
+    function getRecipeData() returns LinkedList<ItemData>
+        return new LinkedList<ItemData>(itemDatas)
+
+    function getResult() returns int
+        return result
+
+    function startBatch()
+        if not batch
+            batch = true
+
+    function endBatch()
+        if batch
+            batch = false
+            count++
+
+    function setAbility(int abilityId)
+        LinkedList<ItemRecipe> recipes
+
+        if abilityId <= 0
+            if this.abilityId != 0
+                recipes = recipeMap.get(abilityId)
+                recipes.remove(this)
+                if recipes.isEmpty()
+                    destroy recipes
+                    recipeMap.remove(abilityId)
+        else
+            if not recipeMap.has(abilityId)
+                recipes = new LinkedList<ItemRecipe>()
+                recipes.push(this)
+                recipeMap.put(abilityId, recipes)
+            else
+                recipes = recipeMap.get(abilityId)
+                if not recipes.contains(this)
+                    recipes.push(this)
+
+    function removeItem(int itemTypeId)
+        let iter = itemDatas.iterator()
+        boolean found = false
+
+        while iter.hasNext()
+            if iter.next().itemTypeId == itemTypeId
+                iter.remove()
+                found = true
+                break
+        iter.close()
+
+        if found
+            let recipes = recipeMap.get(itemTypeId)
+            recipes.remove(this)
+            if recipes.isEmpty()
+                destroy recipes
+                recipeMap.remove(itemTypeId)
+
+    function addItem(int itemTypeId, boolean remove, int charges)
+        LinkedList<ItemRecipe> recipes
+        int chrgs = charges
+
+        if itemTypeId <= 0 or itemTypeId == result
+            return
+        if count >= bj_MAX_INVENTORY and not batch
+            return
+
+        if not recipeMap.has(itemTypeId)
+            recipes = new LinkedList<ItemRecipe>()
+            recipes.push(this)
+            recipeMap.put(itemTypeId, recipes)
+        else
+            recipes = recipeMap.get(itemTypeId)
+            if not recipes.contains(this)
+                recipes.push(this)
+
+        if chrgs < 0
+            chrgs = 0
+
+        let data = new ItemData(itemTypeId, remove, chrgs, count)
+        itemDatas.push(data)
+        if not batch
+            count++
+
+    function addItem(int itemTypeId)
+        addItem(itemTypeId, true, 0)
+
+    private function orderedSearch(unit u) returns HashMap<int, ItemData>
+        int slot = 0
+        boolean found = false
+        item itm
+        int charges
+        ItemData data
+        int idx
+        HashMap<int, ItemData> result = new HashMap<int, ItemData>()
+
+        let iter = itemDatas.iterator()..next()
+        while iter.current != iter.dummy // Match() validated count > size already
+            itm = u.itemInSlot(slot)
+            charges = GetItemCharges(itm)
+            data = iter.current.elem
+            idx = data.index
+
+            while data.index == idx // Treats each part of recipe as possible batch
+                if itm.getTypeId() == data.itemTypeId and charges >= data.charges
+                    result.put(slot, new ItemData(data))
+                    found = true
+                    break
+
+                if iter..next().current == iter.dummy
+                    break
+                data = iter.current.elem
+
+            if not found
+                destroy result
+                iter.close()
+                return null
+            else
+                // Seek node which is not part of this batch
+                while data.index == idx
+                    if iter..next().current == iter.dummy
+                        break
+                    data = iter.current.elem
+            slot++
+        iter.close()
+        return result
+
+    private function unorderedSearch(unit u) returns HashMap<int, ItemData>
+        boolean found
+        ItemData data
+        int idx
+        int slot
+        int size = u.inventorySize()
+        item itm
+        int itemTypeId
+        int charges
+        HashMap<int, ItemData> result = new HashMap<int, ItemData>()
+
+        let iter = itemDatas.iterator()..next()
+        while iter.current != iter.dummy
+            found = false
+            data = iter.current.elem
+            idx = data.index
+
+            // Attempt to find any of item types from given batch within inventory
+            while data.index == idx
+                slot = 0
+                while slot < size
+                    if not result.has(slot)
+                        itm = u.itemInSlot(slot)
+                        itemTypeId = itm.getTypeId()
+                        charges = GetItemCharges(itm)
+
+                        if itemTypeId == data.itemTypeId and charges >= data.charges
+                            result.put(slot, new ItemData(data))
+                            found = true
+                            break
+                    slot++
+
+                if found
+                    break
+                if iter..next().current == iter.dummy
+                    break
+                data = iter.current.elem
+
+            if not found
+                destroy result
+                iter.close()
+                return null
+            else
+                iter.next()
+                while data.index == idx
+                    if iter..next().current == iter.dummy
+                        break
+                    data = iter.current.elem
+        iter.close()
+        return result
+
+    private function match(unit u) returns HashMap<int, ItemData>
+        if count <= 0 or count > u.inventorySize()
+            return null
+        else if requirement != null and not requirement.filter(u)
+            return null
+
+        if ordered
+            return orderedSearch(u)
+        return unorderedSearch(u)
+
+    function assembly(unit u) returns boolean
+        boolean prevHandled = eventHandled
+        int size = u.inventorySize()
+        ItemData data
+        item itm
+        int chrgs
+
+        let recipeData = match(u)
+        if recipeData == null
+            return false
+
+        eventHandled = false
+        fireEvent(eventAssemblingTrigger, this, u, null, recipeData)
+        if eventHandled
+            eventHandled = prevHandled
+            return false
+
+        for i = 0 to size
+            if recipeData.has(i)
+                data = recipeData.get(i)
+                itm = u.itemInSlot(i)
+                if data.charges > 0
+                    chrgs = GetItemCharges(itm)
+                    if chrgs > data.charges and not data.remove
+                        SetItemCharges(itm, chrgs - data.charges)
+                    else
+                        itm.remove()
+                else if data.remove
+                    itm.remove()
+
+        itm = CreateItem(result, u.getX(), u.getY())
+        if charges > 0
+            SetItemCharges(itm, charges)
+        UnitAddItem(u, itm)
+
+        eventHandled = prevHandled
+        fireEvent(eventAssembledTrigger, this, u, itm, recipeData)
+        return true
+    
+    function disassembly(unit u) returns boolean
+        int size = u.inventorySize()
+        boolean found = false
+        item itm = null
+
+        if permanent
+            return false
+
+        for i = 0 to size
+            itm = u.itemInSlot(i)
+            if itm.getTypeId() == result
+                found = true
+                break
+        if not found
+            return false
+
+        itm.remove()
+        for data in itemDatas
+            if data.remove
+                itm = CreateItem(data.itemTypeId, u.getX(), u.getY())
+                if data.charges > 0
+                    SetItemCharges(itm, data.charges)
+                UnitAddItem(u, itm)
+        return true
+
+function onInventoryChange(unit u, item itm)
+    int itemTypeId = itm.getTypeId()
+
+    if recipeMap.has(itemTypeId)
+        let recipes = recipeMap.get(itemTypeId)
+        for recipe in recipes
+            if recipe.assembly(u)
+                break
+
+function onPickUp()
+    onInventoryChange(GetTriggerUnit(), GetManipulatedItem())
+
+function onMoved()
+    onInventoryChange(getEventInventoryUnit(), getEventInventoryItem())
+
+function onCast()
+    unit u
+    int abilityId = GetSpellAbilityId()
+
+    if recipeMap.has(abilityId)
+        u = GetTriggerUnit()
+        let recipes = recipeMap.get(abilityId)
+        for recipe in recipes
+            recipe.assembly(u)
+
+public function assemblyItem(unit u, int itemTypeId) returns boolean
+    if not resultToRecipe.hasInt(itemTypeId)
+        return false
+
+    let recipe = resultToRecipe.loadInt(itemTypeId) castTo ItemRecipe
+    return recipe.assembly(u)
+
+public function disassemblyItem(unit u, item itm) returns boolean
+    int itemTypeId = itm.getTypeId()
+
+    if u.hasItem(itm) and resultToRecipe.hasInt(itemTypeId)
+        let recipe = resultToRecipe.loadInt(itemTypeId) castTo ItemRecipe
+        return recipe.disassembly(u)
+    return false

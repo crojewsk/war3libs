@@ -182,9 +182,15 @@ public class ItemRestriction
 
     /** Remove specified item type from this restriction. */
     function removeTypeId(int itemTypeId)
+        LinkedList<ItemRestriction> restrictions
+
         if has(itemTypeId)
             typeIds.remove(itemTypeId)
-            restrictionsMap.get(itemTypeId).remove(this)
+            restrictions = restrictionsMap.get(itemTypeId)
+            restrictions.remove(this)
+            if restrictions.isEmpty()
+                destroy restrictions
+                restrictionsMap.remove(itemTypeId)
 
     /** Add specified item type to this restriction. */
     function addTypeId(int itemTypeId)
@@ -196,13 +202,14 @@ public class ItemRestriction
         if not has(itemTypeId)
             typeIds.push(itemTypeId)
 
-            restrictions = restrictionsMap.get(itemTypeId)
-            if restrictions == null
+            if not restrictionsMap.has(itemTypeId)
                 restrictions = new LinkedList<ItemRestriction>()
                 restrictions.push(this)
                 restrictionsMap.put(itemTypeId, restrictions)
-            else if not restrictions.contains(this)
-                restrictions.push(this)
+            else
+                restrictions = restrictionsMap.get(itemTypeId)
+                if not restrictions.contains(this)
+                    restrictions.push(this)
 
     /** Removes item limit exception for specified requirement. */
     function removeException(UnitRequirement requirement)
@@ -302,13 +309,15 @@ public class ItemRestriction
 // Returns null (not allowed), empty list (no restrictions) or non-empty list (restrictions to increase count for).
 // Caller is responsible for destroying retrieved list if any
 function evaluateRestrictions(unit u, item itm) returns LinkedList<ItemRestriction>
-    string errorMessage
     let associated = new LinkedList<ItemRestriction>()
-    let restrictions = restrictionsMap.get(itm.getTypeId())
+    LinkedList<ItemRestriction> restrictions
+    int itemTypeId = itm.getTypeId()
+    string errorMessage
 
-    if restrictions == null
+    if not restrictionsMap.has(itemTypeId)
         return associated
 
+    restrictions = restrictionsMap.get(itemTypeId)
     for restriction in restrictions
         errorMessage = restriction.test(u, itm)
 
@@ -341,12 +350,13 @@ function onPickUp()
 
 function onDrop()
     let itemTypeId = GetManipulatedItem().getTypeId()
-    let restrictions = restrictionsMap.get(itemTypeId)
+    LinkedList<ItemRestriction> restrictions
     int count
 
-    if restrictions == null
+    if not restrictionsMap.has(itemTypeId)
         return
 
+    restrictions = restrictionsMap.get(itemTypeId)
     let u = GetTriggerUnit()
     for restriction in restrictions
         count = restriction.getCount(u)

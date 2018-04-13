@@ -32,11 +32,11 @@ public function getEventInventorySlotTo() returns int
 public function getEventInventorySwapped() returns item
     return UnitItemInSlot(eventUnit, eventSlotTo)
 
-public function getUnitItemSlot(unit u, item itm) returns int
-    if u.hasItem(itm)
-        let size = u.inventorySize()
+public function unit.getItemSlot(item itm) returns int
+    if this.hasItem(itm)
+        let size = this.inventorySize()
         for i = 0 to size
-            if u.itemInSlot(i) == itm
+            if this.itemInSlot(i) == itm
                 return i
     return -1
 
@@ -67,7 +67,7 @@ function onItemOrder()
 
     if order >= 852002 and order <= 852007
         itm = GetOrderTargetItem()
-        slotFrom = getUnitItemSlot(u, itm)
+        slotFrom = u.getItemSlot(itm)
         slotTo = order - 852002
         fireEvent(eventMovedTrigger, u, itm, slotFrom, slotTo)
     else
