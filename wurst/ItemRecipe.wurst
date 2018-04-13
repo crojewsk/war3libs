@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.0.0
+*  ItemRecipe v1.1.0.0
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -7,6 +7,7 @@
 package ItemRecipe
 import HashMap
 import LinkedList
+import RegisterEvents
 import ItemRestriction
 import InventoryEvent
 
@@ -383,6 +384,21 @@ public class ItemRecipe
                 UnitAddItem(u, itm)
         return true
 
+public function assemblyItem(unit u, int itemTypeId) returns boolean
+    if not resultToRecipe.hasInt(itemTypeId)
+        return false
+
+    let recipe = resultToRecipe.loadInt(itemTypeId) castTo ItemRecipe
+    return recipe.assembly(u)
+
+public function disassemblyItem(unit u, item itm) returns boolean
+    int itemTypeId = itm.getTypeId()
+
+    if u.hasItem(itm) and resultToRecipe.hasInt(itemTypeId)
+        let recipe = resultToRecipe.loadInt(itemTypeId) castTo ItemRecipe
+        return recipe.disassembly(u)
+    return false
+
 function onInventoryChange(unit u, item itm)
     int itemTypeId = itm.getTypeId()
 
@@ -408,17 +424,6 @@ function onCast()
         for recipe in recipes
             recipe.assembly(u)
 
-public function assemblyItem(unit u, int itemTypeId) returns boolean
-    if not resultToRecipe.hasInt(itemTypeId)
-        return false
-
-    let recipe = resultToRecipe.loadInt(itemTypeId) castTo ItemRecipe
-    return recipe.assembly(u)
-
-public function disassemblyItem(unit u, item itm) returns boolean
-    int itemTypeId = itm.getTypeId()
-
-    if u.hasItem(itm) and resultToRecipe.hasInt(itemTypeId)
-        let recipe = resultToRecipe.loadInt(itemTypeId) castTo ItemRecipe
-        return recipe.disassembly(u)
-    return false
+init
+    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickUp())
+    registerInventoryEvent(EVENT_INVENTORY_MOVED, () -> onMoved())
