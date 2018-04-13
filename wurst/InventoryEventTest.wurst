@@ -1,0 +1,51 @@
+package InventoryEventTest
+import InventoryEvent
+
+function onInventoryMove()
+    unit u = getEventInventoryUnit()
+    item itm = getEventInventoryItem()
+    item itmSwapped = getEventInventorySwapped()
+    int slotFrom = getEventInventorySlotFrom()
+    int slotTo = getEventInventorySlotTo()
+    string s
+
+    if itmSwapped != null
+        s = u.getName() + " swapped " + itm.getName() + "[" + slotFrom.toString() + "] with "
+        s = s + itmSwapped.getName() + "[" + slotTo.toString() + "]"
+    else
+        s = u.getName() + " moved " + itm.getName() + "[" + slotFrom.toString() + "] to slot " + slotTo.toString()
+
+    ClearTextMessages()
+    print(s)
+
+function onInventoryUse()
+    unit u = getEventInventoryUnit()
+    item itm = getEventInventoryItem()
+    int slotFrom = getEventInventorySlotFrom()
+    string s
+
+    s = u.getName() + " used " + itm.getName() + "[" + slotFrom.toString() + "]"
+    ClearTextMessages()
+    print(s)
+
+function start()
+    player p = GetLocalPlayer()
+    real x = GetCameraTargetPositionX()
+    real y = GetCameraTargetPositionY()
+
+    // boots
+    CreateItem('bspd', x, y)
+    // crystall ball
+    CreateItem('crys', x, y)
+    // inferno
+    CreateItem('infs', x, y)
+    // claws of attack
+    CreateItem('ratc', x, y)
+
+    SelectUnit(CreateUnit(p, 'Hpal', x, y, 0), true)
+    GetExpiredTimer().destr()
+
+init
+    registerInventoryEvent(EVENT_INVENTORY_MOVED, () -> onInventoryMove())
+    registerInventoryEvent(EVENT_INVENTORY_USED, () -> onInventoryUse())
+    CreateTimer().start(1, () -> start())

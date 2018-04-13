@@ -1,0 +1,92 @@
+package InventoryEvent
+import RegisterEvents
+
+unit eventUnit = null
+item eventItem = null
+int eventSlotFrom = -1
+int eventSlotTo = -1
+trigger eventMovedTrigger = CreateTrigger()
+trigger eventUsedTrigger = CreateTrigger()
+
+public constant EVENT_INVENTORY_MOVED = 0
+public constant EVENT_INVENTORY_USED = 1
+
+public function getEventInventoryUnit() returns unit
+    return eventUnit
+
+public function getEventInventoryItem() returns item
+    return eventItem
+
+public function getEventInventorySlotFrom() returns int
+    return eventSlotFrom
+
+public function getEventInventorySlotTo() returns int
+    return eventSlotTo
+
+public function getEventInventorySwapped() returns item
+    return UnitItemInSlot(eventUnit, eventSlotTo)
+
+public function getUnitItemSlot(unit u, item itm) returns int
+    if u.hasItem(itm)
+        let size = u.inventorySize()
+        for i = 0 to size
+            if u.itemInSlot(i) == itm
+                return i
+    return -1
+
+function fireEvent(trigger evt, unit u, item itm, integer slotFrom, integer slotTo)
+    unit prevUnit = eventUnit
+    item prevItem = eventItem
+    int prevSlotFrom = eventSlotFrom
+    int prevSlotTo = eventSlotTo
+
+    eventUnit = u
+    eventItem = itm
+    eventSlotFrom = slotFrom
+    eventSlotTo = slotTo
+
+    evt.evaluate()
+
+    eventUnit = prevUnit
+    eventItem = prevItem
+    eventSlotFrom = prevSlotFrom
+    eventSlotTo = prevSlotTo
+
+function onItemOrder()
+    let order = GetIssuedOrderId()
+    let u = GetTriggerUnit()
+    item itm
+    int slotFrom
+    int slotTo
+
+    if order >= 852002 and order <= 852007
+        itm = GetOrderTargetItem()
+        slotFrom = getUnitItemSlot(u, itm)
+        slotTo = order - 852002
+        fireEvent(eventMovedTrigger, u, itm, slotFrom, slotTo)
+    else
+        slotFrom = order - 852008
+        itm = u.itemInSlot(slotFrom)
+        fireEvent(eventUsedTrigger, u, itm, slotFrom, -1)
+
+function onAnyOrder()
+    let order = GetIssuedOrderId()
+    print("order id: " + order.toString())
+    if order >= 852002 and order <= 852013
+        onItemOrder()
+
+public function registerInventoryEvent(int ev, code c)
+    if ev == EVENT_INVENTORY_MOVED
+        eventMovedTrigger.addCondition(Condition(c))
+    else
+        eventUsedTrigger.addCondition(Condition(c))
+
+public function getInventoryEventTrigger(int whichEvent) returns trigger
+    if whichEvent == EVENT_INVENTORY_MOVED
+        return eventMovedTrigger
+    return eventUsedTrigger
+
+init
+    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_ORDER, () -> onAnyOrder())
+    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, () -> onAnyOrder())
+    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER, () -> onAnyOrder())
