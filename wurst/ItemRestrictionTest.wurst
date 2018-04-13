@@ -2,8 +2,8 @@ package ItemRestrictionTest
 import ItemRestriction
 
 init
-    ItemRestriction WEAPON_1H = new ItemRestriction("1H Weapons", 2, null, false)
-    ItemRestriction WEAPON_2H = new ItemRestriction("2H Weapons", 1, null, false)
+    ItemRestriction WEAPON_1H = new ItemRestriction("1H Weapons", 2, null)
+    ItemRestriction WEAPON_2H = new ItemRestriction("2H Weapons", 1, null)
     UnitRequirement MELEE = new UnitRequirement()
 
     MELEE.typeIds.push('Hmkg')

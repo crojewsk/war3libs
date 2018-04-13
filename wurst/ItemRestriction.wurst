@@ -130,7 +130,7 @@ public class ItemRestriction
     /** Name associated with restriction. */
     string name
 
-    construct(string name, int limit, UnitRequirement requirement, bool global)
+    construct(string name, int limit, UnitRequirement requirement)
         cache = new Table()
         typeIds = new LinkedList<int>()
         exceptions = new LinkedList<LimitException>()
