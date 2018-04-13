@@ -1,3 +1,9 @@
+/*
+*  InventoryEvent v1.0.0.0
+*     by Bannar
+*
+*  For intuitive inventory event handling.
+*/
 package InventoryEvent
 import RegisterEvents
 
@@ -71,7 +77,6 @@ function onItemOrder()
 
 function onAnyOrder()
     let order = GetIssuedOrderId()
-    print("order id: " + order.toString())
     if order >= 852002 and order <= 852013
         onItemOrder()
 
