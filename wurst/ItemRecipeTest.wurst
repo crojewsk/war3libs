@@ -1,0 +1,18 @@
+package ItemRecipeTest
+import ItemRecipe
+
+function onAssembling()
+    let u = getEventItemRecipeUnit()
+
+    if u.getTypeId() != 'Ofar'
+        setEventItemRecipeHandled(true)
+        print("Vetoed recipe assembling for: " + u.getName())
+
+init
+    CreateUnit(Player(0), 'Ofar', 200, 200, 0)
+    CreateItem('rat6', 200, 200)
+    CreateItem('pghe', 200, 200)
+    CreateItem('pghe', 200, 200)
+    ItemRecipe recipe = new ItemRecipe('wlsd', 0, false, true, true)
+    recipe.addItem('rat6', false, 0)
+    recipe.addItem('pghe', true, 2)
