@@ -7,8 +7,8 @@ init
     UnitRequirement MELEE = new UnitRequirement()
 
     MELEE.typeIds.push('Hmkg')
-    WEAPON_1H.addTypeId('desc')
-    WEAPON_2H.addTypeId('mlst')
+    WEAPON_1H.addItem('desc')
+    WEAPON_2H.addItem('mlst')
     WEAPON_2H.addExclusive(WEAPON_1H)
     WEAPON_2H.addException(MELEE, 2)
 

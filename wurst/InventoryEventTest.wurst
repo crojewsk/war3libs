@@ -2,11 +2,11 @@ package InventoryEventTest
 import InventoryEvent
 
 function onInventoryMove()
-    unit u = getEventInventoryUnit()
-    item itm = getEventInventoryItem()
-    item itmSwapped = getEventInventorySwapped()
-    int slotFrom = getEventInventorySlotFrom()
-    int slotTo = getEventInventorySlotTo()
+    unit u = getInventoryManipulatingUnit()
+    item itm = getInventoryManipulatedItem()
+    item itmSwapped = getInventorySwappedItem()
+    int slotFrom = getInventorySlotFrom()
+    int slotTo = getInventorySlotTo()
     string s
 
     if itmSwapped != null
@@ -19,9 +19,9 @@ function onInventoryMove()
     print(s)
 
 function onInventoryUse()
-    unit u = getEventInventoryUnit()
-    item itm = getEventInventoryItem()
-    int slotFrom = getEventInventorySlotFrom()
+    unit u = getInventoryManipulatingUnit()
+    item itm = getInventoryManipulatedItem()
+    int slotFrom = getInventorySlotFrom()
     string s
 
     s = u.getName() + " used " + itm.getName() + "[" + slotFrom.toString() + "]"

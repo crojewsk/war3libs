@@ -1,5 +1,7 @@
 package ItemRecipeTest
+import StackNSplit
 import ItemRecipe
+import ClosureTimers
 
 function onAssembling()
     let u = getEventItemRecipeUnit()
@@ -11,8 +13,22 @@ function onAssembling()
 init
     CreateUnit(Player(0), 'Ofar', 200, 200, 0)
     CreateItem('rat6', 200, 200)
-    CreateItem('pghe', 200, 200)
-    CreateItem('pghe', 200, 200)
-    ItemRecipe recipe = new ItemRecipe('wlsd', 0, false, true, true)
-    recipe.addItem('rat6', false, 0)
-    recipe.addItem('pghe', true, 2)
+
+    item itm = CreateItem('pghe', 200, 200)
+    SetItemCharges(itm, 3)
+    itm = CreateItem('pghe', 200, 200)
+    SetItemCharges(itm, 3)
+    itm = CreateItem('pghe', 200, 200)
+    SetItemCharges(itm, 3)
+    itm = CreateItem('pghe', 200, 200)
+    SetItemCharges(itm, 3)
+    itm = CreateItem('pghe', 200, 200)
+    SetItemCharges(itm, 3)
+    itm = CreateItem('pghe', 200, 200)
+    SetItemCharges(itm, 3)
+
+    nullTimer() ->
+        ItemRecipe recipe = new ItemRecipe('wlsd', 0, false, true, true)
+        recipe.addItem('rat6', false, 0)
+        recipe.addItem('pghe', false, 2)
+        makeItemStackable('pghe', 10, 2)

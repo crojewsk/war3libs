@@ -181,7 +181,7 @@ public class ItemRestriction
         return typeIds.contains(itemTypeId)
 
     /** Remove specified item type from this restriction. */
-    function removeTypeId(int itemTypeId)
+    function removeItem(int itemTypeId)
         LinkedList<ItemRestriction> restrictions
 
         if has(itemTypeId)
@@ -193,7 +193,7 @@ public class ItemRestriction
                 restrictionsMap.remove(itemTypeId)
 
     /** Add specified item type to this restriction. */
-    function addTypeId(int itemTypeId)
+    function addItem(int itemTypeId)
         LinkedList<ItemRestriction> restrictions
 
         if itemTypeId <= 0

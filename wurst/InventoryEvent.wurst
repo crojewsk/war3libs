@@ -17,25 +17,25 @@ trigger eventUsedTrigger = CreateTrigger()
 public constant EVENT_INVENTORY_MOVED = 0
 public constant EVENT_INVENTORY_USED = 1
 
-public function getEventInventoryUnit() returns unit
+public function getInventoryManipulatingUnit() returns unit
     return eventUnit
 
-public function getEventInventoryItem() returns item
+public function getInventoryManipulatedItem() returns item
     return eventItem
 
-public function getEventInventorySlotFrom() returns int
+public function getInventorySlotFrom() returns int
     return eventSlotFrom
 
-public function getEventInventorySlotTo() returns int
+public function getInventorySlotTo() returns int
     return eventSlotTo
 
-public function getEventInventorySwapped() returns item
+public function getInventorySwappedItem() returns item
     return UnitItemInSlot(eventUnit, eventSlotTo)
 
 public function unit.getItemSlot(item itm) returns int
     if this.hasItem(itm)
         let size = this.inventorySize()
-        for i = 0 to size
+        for i = 0 to size-1
             if this.itemInSlot(i) == itm
                 return i
     return -1

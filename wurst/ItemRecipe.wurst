@@ -252,7 +252,7 @@ public class ItemRecipe
         int charges
         ItemData data
         int idx
-        HashMap<int, ItemData> reward = new HashMap<int, ItemData>()
+        HashMap<int, ItemData> recipeData = new HashMap<int, ItemData>()
 
         let iter = ingredients.iterator()..next()
         while iter.current != iter.dummy // Match() validated count > size already
@@ -263,7 +263,7 @@ public class ItemRecipe
 
             while data.index == idx // Treats each part of recipe as possible batch
                 if itm.getTypeId() == data.itemTypeId and charges >= data.charges
-                    reward.put(slot, new ItemData(data))
+                    recipeData.put(slot, new ItemData(data))
                     found = true
                     break
 
@@ -272,7 +272,7 @@ public class ItemRecipe
                 data = iter.current.elem
 
             if not found
-                destroy reward
+                destroy recipeData
                 iter.close()
                 return null
             else
@@ -283,7 +283,7 @@ public class ItemRecipe
                     data = iter.current.elem
             slot++
         iter.close()
-        return reward
+        return recipeData
 
     private function unorderedSearch(unit u) returns HashMap<int, ItemData>
         boolean found
@@ -294,7 +294,7 @@ public class ItemRecipe
         item itm
         int itemTypeId
         int charges
-        HashMap<int, ItemData> reward = new HashMap<int, ItemData>()
+        HashMap<int, ItemData> recipeData = new HashMap<int, ItemData>()
 
         let iter = ingredients.iterator()..next()
         while iter.current != iter.dummy
@@ -306,13 +306,13 @@ public class ItemRecipe
             while data.index == idx
                 slot = 0
                 while slot < size
-                    if not reward.has(slot)
+                    if not recipeData.has(slot)
                         itm = u.itemInSlot(slot)
                         itemTypeId = itm.getTypeId()
                         charges = GetItemCharges(itm)
 
                         if itemTypeId == data.itemTypeId and charges >= data.charges
-                            reward.put(slot, new ItemData(data))
+                            recipeData.put(slot, new ItemData(data))
                             found = true
                             break
                     slot++
@@ -324,17 +324,16 @@ public class ItemRecipe
                 data = iter.current.elem
 
             if not found
-                destroy reward
+                destroy recipeData
                 iter.close()
                 return null
             else
-                iter.next()
                 while data.index == idx
                     if iter..next().current == iter.dummy
                         break
                     data = iter.current.elem
         iter.close()
-        return reward
+        return recipeData
 
     private function match(unit u) returns HashMap<int, ItemData>
         if count <= 0 or count > u.inventorySize()
@@ -364,7 +363,7 @@ public class ItemRecipe
             eventHandled = prevHandled
             return false
 
-        for i = 0 to size
+        for i = 0 to size-1
             if recipeData.has(i)
                 data = recipeData.get(i)
                 itm = u.itemInSlot(i)
@@ -395,7 +394,7 @@ public class ItemRecipe
         if permanent
             return false
 
-        for i = 0 to size
+        for i = 0 to size-1
             itm = u.itemInSlot(i)
             if itm.getTypeId() == reward
                 found = true
@@ -442,7 +441,7 @@ function onPickUp()
     onInventoryChange(GetTriggerUnit(), GetManipulatedItem())
 
 function onMoved()
-    onInventoryChange(getEventInventoryUnit(), getEventInventoryItem())
+    onInventoryChange(getInventoryManipulatingUnit(), getInventoryManipulatedItem())
 
 function onCast()
     unit u

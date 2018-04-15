@@ -1,0 +1,289 @@
+package StackNSplit
+import HashMap
+import LinkedList
+import RegisterEvents
+import InventoryEvent
+
+@configurable int PICK_UP_RANGE = 150
+
+Table stackTable = new Table()
+
+// For smoothing item stacking when unit inventory is full
+class PeriodicData
+    unit u
+    item itm
+
+let map = new HashMap<int, PeriodicData>()
+let collection = new LinkedList<PeriodicData>()
+timer periodic = CreateTimer()
+
+unit eventUnit = null
+item eventItem = null
+int eventCharges = 0
+trigger eventAddedTrigger = CreateTrigger()
+trigger eventRemoveTrigger = CreateTrigger()
+
+public constant int EVENT_ITEM_CHARGED_ADDED = 0
+public constant int EVENT_ITEM_CHARGES_REMOVED = 1
+
+public function getItemStackingUnit() returns unit
+    return eventUnit
+
+public function getItemStackingItem() returns item
+    return eventItem
+
+public function getItemStackingCharges() returns int
+    return eventCharges
+
+/** Registers new event handler for specified item recipe event. */
+public function registerItemStackingEvent(int whichEvent, code c)
+    if whichEvent == EVENT_ITEM_CHARGED_ADDED
+        eventAddedTrigger.addCondition(Condition(c))
+    else if whichEvent == EVENT_ITEM_CHARGES_REMOVED
+        eventRemoveTrigger.addCondition(Condition(c))
+
+/** Returns trigger handle associated with specified recipe event. */
+public function getItemStackingEventTrigger(int whichEvent) returns trigger
+    if whichEvent == EVENT_ITEM_CHARGED_ADDED
+        return eventAddedTrigger
+    else if whichEvent == EVENT_ITEM_CHARGES_REMOVED
+        return eventRemoveTrigger
+    return null
+
+public function unit.isInventoryFull() returns boolean
+    let size = this.inventorySize()
+
+    for i = 0 to size-1
+        if this.itemInSlot(i) == null
+            return false
+    return true
+
+public function unit.isItemFullyStacked(int itemTypeId) returns boolean
+    let max = getItemMaxStacks(itemTypeId)
+    item itm
+
+    if max > 0
+        let size = this.inventorySize()
+        for i = 0 to size-1
+            itm = this.itemInSlot(i)
+            if itm.getTypeId() == itemTypeId and GetItemCharges(itm) < max
+                return false
+    return true
+
+function fireEvent(trigger evt, unit u, item itm, int charges)
+    unit prevUnit = eventUnit
+    item prevItem = eventItem
+    integer prevCharges = eventCharges
+
+    eventUnit = u
+    eventItem = itm
+    eventCharges = charges
+
+    evt.evaluate()
+
+    eventUnit = prevUnit
+    eventItem = prevItem
+    eventCharges = prevCharges
+
+public function isItemStackable(int itemTypeId) returns boolean
+    return stackTable.hasInt(itemTypeId)
+
+public function makeItemStackable(int itemTypeId, int stacks, int splits)
+    int value = splits
+
+    if stacks > 0
+        if value < 1
+            value = 1
+        stackTable.saveInt(itemTypeId, stacks)
+        stackTable.saveInt(-itemTypeId, value)
+
+public function makeItemUnstackable(int itemTypeId)
+    stackTable.removeInt(itemTypeId)
+    stackTable.removeInt(-itemTypeId)
+
+public function getItemMaxStacks(int itemTypeId) returns int
+    if isItemStackable(itemTypeId)
+        return stackTable.loadInt(itemTypeId)
+    return 0
+
+public function getItemSplitCount(int itemTypeId) returns int
+    if isItemStackable(itemTypeId)
+        return stackTable.loadInt(-itemTypeId)
+    return 0
+
+public function stackItem(unit u, item itm) returns boolean
+    int charges = GetItemCharges(itm)
+    int itemTypeId = itm.getTypeId()
+    int curr
+    int diff
+    int size = u.inventorySize()
+    item with
+
+    if charges == 0 or not isItemStackable(itemTypeId)
+        return false
+
+    int max = getItemMaxStacks(itemTypeId)
+    for i = 0 to size-1
+        with = u.itemInSlot(i)
+
+        if with != itm and with.getTypeId() == itemTypeId
+            curr = GetItemCharges(with)
+
+            if curr < max
+                diff = max - curr
+                if diff > charges
+                    SetItemCharges(with, curr + charges)
+                    fireEvent(eventAddedTrigger, u, with, charges)
+                else
+                    SetItemCharges(with, max)
+                    fireEvent(eventAddedTrigger, u, with, diff)
+                charges -= diff
+        if charges <= 0
+            break
+
+    if charges <= 0
+        itm.remove()
+    else if charges != GetItemCharges(itm)
+        SetItemCharges(itm, charges)
+    return true
+
+function callback()
+    var iter = collection.iterator()
+    while iter.hasNext()
+        var data = iter.next()
+        if not data.u.isAlive() or data.u.getCurrentOrder() != 851986
+            or data.itm == null or IsItemOwned(data.itm)
+            destroy data
+            iter.remove()
+            map.remove(data.u.getHandleId())
+            if collection.isEmpty()
+                periodic.pause()
+        else
+            let dx = data.itm.getX() - data.u.getX()
+            let dy = data.itm.getY() - data.u.getY()
+
+            if (dx * dx +  dy * dy) <= PICK_UP_RANGE
+                let t = getPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_ISSUED_ORDER)
+                t.disable()
+                data.u.issueImmediateOrderById(851972)
+                t.enable()
+
+                stackItem(data.u, data.itm)
+
+                destroy data
+                iter.remove()
+                map.remove(data.u.getHandleId())
+                if collection.isEmpty()
+                    periodic.pause()
+    iter.close()
+
+function onAnyOrder()
+    item itm = GetOrderTargetItem()
+    int itemTypeId
+    PeriodicData data
+
+    if itm == null or GetIssuedOrderId() != 851971
+        return
+    itemTypeId = itm.getTypeId()
+    if not isItemStackable(itemTypeId)
+        return
+
+    let u = GetTriggerUnit()
+    if u.isInventoryFull() and not u.isItemFullyStacked(itemTypeId)
+        if not map.has(u.getHandleId())
+            data = new PeriodicData()
+            data.u = u
+            map.put(u.getHandleId(), data)
+            if collection.isEmpty()
+                periodic.startPeriodic(0.031250000, () -> callback())
+            collection.push(data)
+        else
+            data = map.get(u.getHandleId())
+        data.itm = itm
+
+        let t = GetTriggeringTrigger()
+        t.disable()
+        u.issuePointOrderById(851986, vec2(itm.getX(), itm.getY()))
+        t.enable()
+
+function onPickUp()
+    item itm = GetManipulatedItem()
+
+    if isItemStackable(itm.getTypeId())
+        stackItem(GetTriggerUnit(), itm)
+
+function onMoved()
+    unit u = getInventoryManipulatingUnit()
+    item itm = getInventoryManipulatedItem()
+    int slotFrom = getInventorySlotFrom()
+    item with = getInventorySwappedItem()
+    int curr
+    int diff
+    int charges = GetItemCharges(itm)
+    int itemTypeId = itm.getTypeId()
+    int size = u.inventorySize()
+    int max
+    int toSplit
+
+    if not isItemStackable(itemTypeId)
+        return
+
+    max = getItemMaxStacks(itemTypeId)
+    toSplit = getItemSplitCount(itemTypeId)
+
+    if slotFrom == getInventorySlotTo() // splitting
+        if charges < 2 // need at least 2
+            return
+        else if toSplit >= charges
+            toSplit = charges - 1
+        SetItemCharges(itm, charges - toSplit)
+        fireEvent(eventRemoveTrigger, u, itm, toSplit)
+
+        // Redistribute the splitted stacks if possible
+        for i = 0 to size-1
+            if i != slotFrom
+                with = u.itemInSlot(i)
+                if with.getTypeId() == itemTypeId
+                    curr = GetItemCharges(with)
+                    diff = max - curr
+                    if diff > toSplit
+                        SetItemCharges(with, curr + toSplit)
+                        fireEvent(eventAddedTrigger, u, with, toSplit)
+                    else
+                        SetItemCharges(with, max)
+                        fireEvent(eventAddedTrigger, u, with, diff)
+                    toSplit -= diff
+            if toSplit <= 0
+                break
+        if toSplit > 0 // something is left
+            with = CreateItem(itemTypeId, u.getX(), u.getY())
+            SetItemCharges(with, toSplit)
+            trigger t = getPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_PICKUP_ITEM)
+            t.disable()
+            UnitAddItem(u, with)
+            t.enable()
+    else if with.getTypeId() == itemTypeId
+        curr = GetItemCharges(with)
+        toSplit = charges + curr
+
+        if toSplit > max
+            if curr != max
+                diff = max - charges
+                SetItemCharges(itm, max)
+                fireEvent(eventAddedTrigger, u, itm, diff)
+                SetItemCharges(with, toSplit - max)
+                fireEvent(eventRemoveTrigger, u, with, diff)
+        else
+            SetItemCharges(with, toSplit)
+            fireEvent(eventAddedTrigger, u, with, charges)
+            itm.remove()
+
+init
+    // Allows to ignore SquareRoot
+    PICK_UP_RANGE *= PICK_UP_RANGE
+
+    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_ORDER, () -> onAnyOrder())
+    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, () -> onAnyOrder())
+    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER, () -> onAnyOrder())
+    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickUp())
+    registerInventoryEvent(EVENT_INVENTORY_MOVED, () -> onMoved())
