@@ -1,21 +1,16 @@
+/*
+*  StackNSplit v1.0.0.0
+*     by Bannar
+*
+*  Easy item charges stacking and splitting.
+*/
 package StackNSplit
 import HashMap
-import LinkedList
 import RegisterEvents
 import InventoryEvent
-
-@configurable int PICK_UP_RANGE = 150
+import SmoothItemPickup
 
 Table stackTable = new Table()
-
-// For smoothing item stacking when unit inventory is full
-class PeriodicData
-    unit u
-    item itm
-
-let map = new HashMap<int, PeriodicData>()
-let collection = new LinkedList<PeriodicData>()
-timer periodic = CreateTimer()
 
 unit eventUnit = null
 item eventItem = null
@@ -50,6 +45,7 @@ public function getItemStackingEventTrigger(int whichEvent) returns trigger
         return eventRemoveTrigger
     return null
 
+/** Checks if unit inventory is full. */
 public function unit.isInventoryFull() returns boolean
     let size = this.inventorySize()
 
@@ -58,6 +54,7 @@ public function unit.isInventoryFull() returns boolean
             return false
     return true
 
+/** Checks if unit inventory is fully stacked and no charges can be added. */
 public function unit.isItemFullyStacked(int itemTypeId) returns boolean
     let max = getItemMaxStacks(itemTypeId)
     item itm
@@ -85,9 +82,11 @@ function fireEvent(trigger evt, unit u, item itm, int charges)
     eventItem = prevItem
     eventCharges = prevCharges
 
+/** Returns value indicating whether specified item is registered as stackable. */
 public function isItemStackable(int itemTypeId) returns boolean
     return stackTable.hasInt(itemTypeId)
 
+/** Registers specified item as stackable. */
 public function makeItemStackable(int itemTypeId, int stacks, int splits)
     int value = splits
 
@@ -97,20 +96,25 @@ public function makeItemStackable(int itemTypeId, int stacks, int splits)
         stackTable.saveInt(itemTypeId, stacks)
         stackTable.saveInt(-itemTypeId, value)
 
+/** Unregisters specified item from being stackable. */
 public function makeItemUnstackable(int itemTypeId)
     stackTable.removeInt(itemTypeId)
     stackTable.removeInt(-itemTypeId)
 
+/** Retrieves maximum amount of stacks for specified item. */
 public function getItemMaxStacks(int itemTypeId) returns int
     if isItemStackable(itemTypeId)
         return stackTable.loadInt(itemTypeId)
     return 0
 
+/** Retrieves number of stacks are dropped when splitting. This number is not final and can change during runtime
+    if event item does not have required number of charges. Capped at minimum of 1. */
 public function getItemSplitCount(int itemTypeId) returns int
     if isItemStackable(itemTypeId)
         return stackTable.loadInt(-itemTypeId)
     return 0
 
+/** Attempts to stack provided item for specified unit. */
 public function stackItem(unit u, item itm) returns boolean
     int charges = GetItemCharges(itm)
     int itemTypeId = itm.getTypeId()
@@ -146,65 +150,6 @@ public function stackItem(unit u, item itm) returns boolean
     else if charges != GetItemCharges(itm)
         SetItemCharges(itm, charges)
     return true
-
-function callback()
-    var iter = collection.iterator()
-    while iter.hasNext()
-        var data = iter.next()
-        if not data.u.isAlive() or data.u.getCurrentOrder() != 851986
-            or data.itm == null or IsItemOwned(data.itm)
-            destroy data
-            iter.remove()
-            map.remove(data.u.getHandleId())
-            if collection.isEmpty()
-                periodic.pause()
-        else
-            let dx = data.itm.getX() - data.u.getX()
-            let dy = data.itm.getY() - data.u.getY()
-
-            if (dx * dx +  dy * dy) <= PICK_UP_RANGE
-                let t = getPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_ISSUED_ORDER)
-                t.disable()
-                data.u.issueImmediateOrderById(851972)
-                t.enable()
-
-                stackItem(data.u, data.itm)
-
-                destroy data
-                iter.remove()
-                map.remove(data.u.getHandleId())
-                if collection.isEmpty()
-                    periodic.pause()
-    iter.close()
-
-function onAnyOrder()
-    item itm = GetOrderTargetItem()
-    int itemTypeId
-    PeriodicData data
-
-    if itm == null or GetIssuedOrderId() != 851971
-        return
-    itemTypeId = itm.getTypeId()
-    if not isItemStackable(itemTypeId)
-        return
-
-    let u = GetTriggerUnit()
-    if u.isInventoryFull() and not u.isItemFullyStacked(itemTypeId)
-        if not map.has(u.getHandleId())
-            data = new PeriodicData()
-            data.u = u
-            map.put(u.getHandleId(), data)
-            if collection.isEmpty()
-                periodic.startPeriodic(0.031250000, () -> callback())
-            collection.push(data)
-        else
-            data = map.get(u.getHandleId())
-        data.itm = itm
-
-        let t = GetTriggeringTrigger()
-        t.disable()
-        u.issuePointOrderById(851986, vec2(itm.getX(), itm.getY()))
-        t.enable()
 
 function onPickUp()
     item itm = GetManipulatedItem()
@@ -278,12 +223,19 @@ function onMoved()
             fireEvent(eventAddedTrigger, u, with, charges)
             itm.remove()
 
-init
-    // Allows to ignore SquareRoot
-    PICK_UP_RANGE *= PICK_UP_RANGE
+function onSmoothPickup()
+    stackItem(getSmoothItemPickupUnit(), getSmoothItemPickupItem())
 
-    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_ORDER, () -> onAnyOrder())
-    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, () -> onAnyOrder())
-    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER, () -> onAnyOrder())
+function predicate() returns boolean
+    let itemTypeId = GetOrderTargetItem().getTypeId()
+    if not isItemStackable(itemTypeId)
+        return false
+
+    let u = GetTriggerUnit()
+    return u.isInventoryFull() and not u.isItemFullyStacked(itemTypeId)
+
+init
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickUp())
     registerInventoryEvent(EVENT_INVENTORY_MOVED, () -> onMoved())
+    registerSmoothItemPickupEvent(() -> onSmoothPickup())
+    addSmoothPickupCondition(() -> predicate())

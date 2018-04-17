@@ -30,8 +30,8 @@ function onInventoryUse()
 
 function start()
     player p = GetLocalPlayer()
-    real x = GetCameraTargetPositionX()
-    real y = GetCameraTargetPositionY()
+    real x = -200//GetCameraTargetPositionX()
+    real y = -200///GetCameraTargetPositionY()
 
     // boots
     CreateItem('bspd', x, y)
@@ -42,7 +42,7 @@ function start()
     // claws of attack
     CreateItem('ratc', x, y)
 
-    SelectUnit(CreateUnit(p, 'Hpal', x, y, 0), true)
+    CreateUnit(p, 'Hpal', x, y, 0)
     GetExpiredTimer().destr()
 
 init

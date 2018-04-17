@@ -92,6 +92,7 @@ public function getInventoryEventTrigger(int whichEvent) returns trigger
     return eventUsedTrigger
 
 init
+    // MOVED is order of type TARGET_ORDER yet USED can be anyone of them
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_ORDER, () -> onAnyOrder())
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, () -> onAnyOrder())
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER, () -> onAnyOrder())

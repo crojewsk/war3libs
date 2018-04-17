@@ -11,8 +11,10 @@ function onAssembling()
         print("Vetoed recipe assembling for: " + u.getName())
 
 init
-    CreateUnit(Player(0), 'Ofar', 200, 200, 0)
+    unit u = CreateUnit(Player(0), 'Ofar', 200, 200, 0)
+    u.setLife(100)
     CreateItem('rat6', 200, 200)
+    CreateUnit(Player(0), 'hpea', 0, 0, 0)
 
     item itm = CreateItem('pghe', 200, 200)
     SetItemCharges(itm, 3)
