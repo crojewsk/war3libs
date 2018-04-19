@@ -10,6 +10,8 @@ import LinkedList
 import RegisterEvents
 import ItemRestriction
 import InventoryEvent
+import SmoothItemPickup
+import StackNSplit
 
 // Global containers for associated recipe list retrieval
 let recipeMap = new HashMap<int, LinkedList<ItemRecipe>>()
@@ -153,7 +155,7 @@ public class ItemRecipe
         return false
 
     /** Returns shallow copy of item recipe data. */
-    function getRecipeData() returns LinkedList<ItemData>
+    function getIngredients() returns LinkedList<ItemData>
         return new LinkedList<ItemData>(ingredients)
 
     /** Returns item type of this recipe reward. */
@@ -245,7 +247,7 @@ public class ItemRecipe
     function addItem(int itemTypeId)
         addItem(itemTypeId, true, 0)
 
-    private function orderedSearch(unit u) returns HashMap<int, ItemData>
+    private function orderedSearch(LinkedList<item> items) returns HashMap<int, ItemData>
         int slot = 0
         boolean found = false
         item itm
@@ -256,7 +258,7 @@ public class ItemRecipe
 
         let iter = ingredients.iterator()..next()
         while iter.current != iter.dummy // Match() validated count > size already
-            itm = u.itemInSlot(slot)
+            itm = items.get(slot)
             charges = GetItemCharges(itm)
             data = iter.current.elem
             idx = data.index
@@ -285,12 +287,12 @@ public class ItemRecipe
         iter.close()
         return recipeData
 
-    private function unorderedSearch(unit u) returns HashMap<int, ItemData>
+    private function unorderedSearch(LinkedList<item> items) returns HashMap<int, ItemData>
         boolean found
         ItemData data
         int idx
         int slot
-        int size = u.inventorySize()
+        int size = items.size()
         item itm
         int itemTypeId
         int charges
@@ -307,7 +309,7 @@ public class ItemRecipe
                 slot = 0
                 while slot < size
                     if not recipeData.has(slot)
-                        itm = u.itemInSlot(slot)
+                        itm = items.get(slot)
                         itemTypeId = itm.getTypeId()
                         charges = GetItemCharges(itm)
 
@@ -335,25 +337,35 @@ public class ItemRecipe
         iter.close()
         return recipeData
 
-    private function match(unit u) returns HashMap<int, ItemData>
-        if count <= 0 or count > u.inventorySize()
+    /** Checks if recipe can be assembled for specified unit given the ingredients list. */
+    function test(unit u, LinkedList<item> items) returns HashMap<int, ItemData>
+        if count <= 0 or count > items.size()
             return null
-        else if requirement != null and not requirement.filter(u)
+        if requirement != null and not requirement.filter(u)
             return null
 
         if ordered
-            return orderedSearch(u)
-        return unorderedSearch(u)
+            return orderedSearch(items)
+        return unorderedSearch(items)
 
-    /** Attempts to assembly this recipe for specified unit. */
-    function assembly(unit u) returns boolean
+    /** Checks if recipe can be assembled for specified unit. */
+    function test(unit u) returns HashMap<int, ItemData>
+        let size = u.inventorySize()
+        let items = new LinkedList<item>()
+        for i = 0 to size - 1
+            items.push(u.itemInSlot(i))
+
+        return test(u, items)
+
+    /** Attempts to assembly recipe for specified unit given the ingredients list. */
+    function assembly(unit u, LinkedList<item> items) returns boolean
         boolean prevHandled = eventHandled
-        int size = u.inventorySize()
+        int size = items.size()
         ItemData data
         item itm
         int chrgs
 
-        let recipeData = match(u)
+        let recipeData = test(u, items)
         if recipeData == null
             return false
 
@@ -363,10 +375,10 @@ public class ItemRecipe
             eventHandled = prevHandled
             return false
 
-        for i = 0 to size-1
+        for i = 0 to size
             if recipeData.has(i)
                 data = recipeData.get(i)
-                itm = u.itemInSlot(i)
+                itm = items.get(i)
                 if data.charges > 0
                     chrgs = GetItemCharges(itm)
                     if chrgs > data.charges and not data.remove
@@ -384,6 +396,15 @@ public class ItemRecipe
         eventHandled = prevHandled
         fireEvent(eventAssembledTrigger, this, u, itm, recipeData)
         return true
+
+    /** Attempts to assembly recipe for specified unit. */
+    function assembly(unit u) returns boolean
+        let size = u.inventorySize()
+        let items = new LinkedList<item>()
+
+        for slot = 0 to size - 1
+            items.push(u.itemInSlot(slot))
+        return assembly(u, items)
 
     /** Reverts the assembly, removing the reward item and returning all ingredients to specified unit. */
     function disassembly(unit u) returns boolean
@@ -453,6 +474,53 @@ function onCast()
         for recipe in recipes
             recipe.assembly(u)
 
+function getCheatRecipe(unit u, item itm) returns ItemRecipe
+    let itemTypeId = itm.getTypeId()
+
+    if not recipeMap.has(itemTypeId)
+        return null
+
+    let size = u.inventorySize()
+    let items = new LinkedList<item>()
+
+    for slot = 0 to size - 1
+        items.push(u.itemInSlot(slot))
+    items.push(itm)
+
+    let recipes = recipeMap.get(itemTypeId)
+
+    for recipe in recipes
+        if recipe.pickUp and not recipe.ordered
+            let ingredients = recipe.getIngredients()
+            for ingredient in ingredients
+                // At least one item has to removed, in order to fit recipe reward in
+                if ingredient.remove
+                    if recipe.test(u, items) != null
+                        return recipe
+    return null
+
+function onSmoothPickup()
+    let u = getSmoothItemPickupUnit()
+    let itm = getSmoothItemPickupItem()
+    let recipe = getCheatRecipe(u, itm)
+
+    if recipe == null
+        return
+
+    let size = u.inventorySize()
+    let items = new LinkedList<item>()
+
+    for slot = 0 to size - 1
+        items.push(u.itemInSlot(slot))
+    items.push(itm)
+    recipe.assembly(u, items)
+
+function predicate() returns boolean
+    return GetTriggerUnit().isInventoryFull() and
+        getCheatRecipe(GetTriggerUnit(), GetOrderTargetItem()) != null
+
 init
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickUp())
     registerInventoryEvent(EVENT_INVENTORY_MOVED, () -> onMoved())
+    registerSmoothItemPickupEvent(() -> onSmoothPickup())
+    addSmoothPickupCondition(() -> predicate())
