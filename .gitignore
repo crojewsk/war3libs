@@ -1,0 +1,11 @@
+/_build
+wurst.dependencies
+.vscode/settings.json
+/imports
+/wurst/DebugInit.wurst
+/wurst/war3map.j
+ExampleMap.w3x
+wurst.build
+wurst_run.args
+scripts/backups
+scripts/logs
