@@ -29,7 +29,7 @@ class PeriodicData
     item itm
     real range
 
-    construct()
+    construct(unit u)
         map.put(u.getHandleId(), this)
 
     ondestroy
@@ -45,15 +45,15 @@ public function getSmoothItemPickupUnit() returns unit
 public function getSmoothItemPickupItem() returns item
     return eventItem
 
-public function registerSmoothItemPickupEvent(code cb)
-    eventTrigger.addCondition(Condition(cb))
+public function registerSmoothItemPickupEvent(code func)
+    eventTrigger.addCondition(Condition(func))
 
-public function addSmoothPickupCondition(SmoothPickupPredicate predicate)
+public function addSmoothItemPickupCondition(SmoothPickupPredicate predicate)
     if predicate == null
         return
     conditions.add(predicate)
 
-public function removeSmoothPickupCondition(SmoothPickupPredicate predicate)
+public function removeSmoothItemPickupCondition(SmoothPickupPredicate predicate)
     if predicate == null
         return
     conditions.remove(predicate)
@@ -77,14 +77,14 @@ function test(unit u, item itm, real range) returns boolean
 
     let dx = itm.getX() - u.getX()
     let dy = itm.getY() - u.getY()
-    // Ignore SquareRoot by providing multiplied range
+    // Assumes range is multipled to avoid invoking SquareRoot
     return (dx * dx +  dy * dy) <= range
 
 function onCallback()
     var iter = PeriodicData.iterator()
     while iter.hasNext()
         var data = iter.next()
-        if not data.u.isAlive() or data.u.getCurrentOrder() != 851986
+        if not data.u.isAlive() or data.u.getCurrentOrder() != Orders.move
             or data.itm == null or data.itm.isOwned()
 
             destroy data
@@ -119,7 +119,7 @@ function onTargetOrder()
     real range = (PICK_UP_RANGE + collision) * (PICK_UP_RANGE + collision)
 
     if test(u, itm, range)
-        // Pprevent picking up item before the order 'finishes'.
+        // Ensures order is finished before item is picked up.
         // Fixes the issue with unit moving towards the item location, rather than stopping
         nullTimer() ->
             fireEvent(u, itm)
@@ -127,9 +127,7 @@ function onTargetOrder()
         if not map.has(u.getHandleId())
             if PeriodicData.size == 0
                 periodic.startPeriodic(0.031250000, () -> onCallback())
-            data = new PeriodicData()
-            data.u = u
-            
+            data = new PeriodicData(u)
             data.range = range
         else
             data = map.get(u.getHandleId())
@@ -141,7 +139,7 @@ function onTargetOrder()
         trigger t = getPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER)
         t.disable()
         u.issuePointOrderById(Orders.move, vec2(x, y))
-        t.enable()        
+        t.enable()
 
 init
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, () -> onTargetOrder())

@@ -16,64 +16,37 @@ unit eventUnit = null
 item eventItem = null
 int eventCharges = 0
 trigger eventAddedTrigger = CreateTrigger()
-trigger eventRemoveTrigger = CreateTrigger()
+trigger eventRemovedTrigger = CreateTrigger()
 
-public constant int EVENT_ITEM_CHARGED_ADDED = 0
+public constant int EVENT_ITEM_CHARGES_ADDED = 0
 public constant int EVENT_ITEM_CHARGES_REMOVED = 1
 
+/** Returns unit which manupilated event item. */
 public function getItemStackingUnit() returns unit
     return eventUnit
 
+/** Returns manipulated event item. */
 public function getItemStackingItem() returns item
     return eventItem
 
+/** Returns number of charges that has been added or removed. */
 public function getItemStackingCharges() returns int
     return eventCharges
 
-/** Registers new event handler for specified item recipe event. */
-public function registerItemStackingEvent(int whichEvent, code c)
-    if whichEvent == EVENT_ITEM_CHARGED_ADDED
-        eventAddedTrigger.addCondition(Condition(c))
-    else if whichEvent == EVENT_ITEM_CHARGES_REMOVED
-        eventRemoveTrigger.addCondition(Condition(c))
-
-/** Returns trigger handle associated with specified recipe event. */
+/** Returns trigger handle associated with specified item stacking event. */
 public function getItemStackingEventTrigger(int whichEvent) returns trigger
-    if whichEvent == EVENT_ITEM_CHARGED_ADDED
+    if whichEvent == EVENT_ITEM_CHARGES_ADDED
         return eventAddedTrigger
     else if whichEvent == EVENT_ITEM_CHARGES_REMOVED
-        return eventRemoveTrigger
+        return eventRemovedTrigger
     return null
 
-/** Checks if unit inventory is fully stacked and no charges can be added. */
-public function unit.isItemFullyStacked(int itemTypeId) returns boolean
-    boolean result = true
-    int max = getItemMaxStacks(itemTypeId)
-    item itm
-
-    if max > 0
-        int size = this.inventorySize()
-        for slot = 0 to size - 1
-            itm = this.itemInSlot(slot)
-            if itm.getTypeId() == itemTypeId and GetItemCharges(itm) < max
-                result = false
-                break
-    return result
-
-function fireEvent(trigger evt, unit u, item itm, int charges)
-    unit prevUnit = eventUnit
-    item prevItem = eventItem
-    integer prevCharges = eventCharges
-
-    eventUnit = u
-    eventItem = itm
-    eventCharges = charges
-
-    evt.evaluate()
-
-    eventUnit = prevUnit
-    eventItem = prevItem
-    eventCharges = prevCharges
+/** Registers new event handler for specified item stacking event. */
+public function registerItemStackingEvent(int whichEvent, code cb)
+    if whichEvent == EVENT_ITEM_CHARGES_ADDED
+        eventAddedTrigger.addCondition(Condition(cb))
+    else if whichEvent == EVENT_ITEM_CHARGES_REMOVED
+        eventRemovedTrigger.addCondition(Condition(cb))
 
 /** Returns value indicating whether specified item is registered as stackable. */
 public function isItemStackable(int itemTypeId) returns boolean
@@ -107,13 +80,48 @@ public function getItemSplitCount(int itemTypeId) returns int
         return stackTable.loadInt(-itemTypeId)
     return 0
 
+/** Checks if unit inventory is fully stacked and no charges can be added. */
+public function unit.isItemFullyStacked(int itemTypeId) returns boolean
+    boolean result = true
+    item itm
+
+    if not this.isInventoryFull()
+        return false
+    else if not isItemStackable(itemTypeId)
+        return result
+
+    int max = getItemMaxStacks(itemTypeId)
+    if max > 0
+        int size = this.inventorySize()
+        for slot = 0 to size - 1
+            itm = this.itemInSlot(slot)
+            if itm.getTypeId() == itemTypeId and GetItemCharges(itm) < max
+                result = false
+                break
+    return result
+
+function fireEvent(trigger evt, unit u, item itm, int charges)
+    unit prevUnit = eventUnit
+    item prevItem = eventItem
+    integer prevCharges = eventCharges
+
+    eventUnit = u
+    eventItem = itm
+    eventCharges = charges
+
+    evt.evaluate()
+
+    eventUnit = prevUnit
+    eventItem = prevItem
+    eventCharges = prevCharges
+
 /** Attempts to stack provided item for specified unit. */
-public function stackItem(unit u, item itm) returns boolean
-    int charges = itm.getCharges()
-    int itemTypeId = itm.getTypeId()
+public function unit.stackItem(item whichItem) returns boolean
+    int charges = whichItem.getCharges()
+    int itemTypeId = whichItem.getTypeId()
     int curr
     int diff
-    int size = u.inventorySize()
+    int size = this.inventorySize()
     item with
 
     if charges == 0 or not isItemStackable(itemTypeId)
@@ -121,34 +129,34 @@ public function stackItem(unit u, item itm) returns boolean
 
     int max = getItemMaxStacks(itemTypeId)
     for slot = 0 to size - 1
-        with = u.itemInSlot(slot)
+        with = this.itemInSlot(slot)
 
-        if with != itm and with.getTypeId() == itemTypeId
+        if with != whichItem and with.getTypeId() == itemTypeId
             curr = with.getCharges()
 
             if curr < max
                 diff = max - curr
                 if diff > charges
                     with.setCharges(curr + charges)
-                    fireEvent(eventAddedTrigger, u, with, charges)
+                    fireEvent(eventAddedTrigger, this, with, charges)
                 else
                     with.setCharges(max)
-                    fireEvent(eventAddedTrigger, u, with, diff)
+                    fireEvent(eventAddedTrigger, this, with, diff)
                 charges -= diff
         if charges <= 0
             break
 
     if charges <= 0
-        itm.remove()
-    else if charges != itm.getCharges()
-        itm.setCharges(charges)
+        whichItem.remove()
+    else if charges != whichItem.getCharges()
+        whichItem.setCharges(charges)
     return true
 
 function onPickUp()
     item itm = GetManipulatedItem()
 
     if isItemStackable(itm.getTypeId())
-        stackItem(GetTriggerUnit(), itm)
+        GetTriggerUnit().stackItem(itm)
 
 function onMoved()
     unit u = getInventoryManipulatingUnit()
@@ -175,9 +183,9 @@ function onMoved()
         else if toSplit >= charges
             toSplit = charges - 1
         SetItemCharges(itm, charges - toSplit)
-        fireEvent(eventRemoveTrigger, u, itm, toSplit)
+        fireEvent(eventRemovedTrigger, u, itm, toSplit)
 
-        // Redistribute the splitted stacks if possible
+        // Redistribute splitted stacks if possible
         for slot = 0 to size - 1
             if slot != slotFrom
                 with = u.itemInSlot(slot)
@@ -205,31 +213,30 @@ function onMoved()
         toSplit = charges + curr
 
         if toSplit > max
-            if curr != max
+            if curr < max
                 diff = max - charges
                 itm.setCharges(max)
                 fireEvent(eventAddedTrigger, u, itm, diff)
                 with.setCharges(toSplit - max)
-                fireEvent(eventRemoveTrigger, u, with, diff)
+                fireEvent(eventRemovedTrigger, u, with, diff)
         else
             with.setCharges(toSplit)
             fireEvent(eventAddedTrigger, u, with, charges)
             itm.remove()
 
 function onSmoothPickup()
-    stackItem(getSmoothItemPickupUnit(), getSmoothItemPickupItem())
+    getSmoothItemPickupUnit().stackItem(getSmoothItemPickupItem())
 
 class StackSmoothPickupPredicate implements SmoothPickupPredicate
-
     function canPickup(unit u, item itm) returns boolean
         int itemTypeId = itm.getTypeId()
         if not isItemStackable(itemTypeId)
             return false
 
-        return u.isInventoryFull() and not u.isItemFullyStacked(itemTypeId)
+        return not u.isItemFullyStacked(itemTypeId)
 
 init
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickUp())
     registerInventoryEvent(EVENT_INVENTORY_MOVED, () -> onMoved())
     registerSmoothItemPickupEvent(() -> onSmoothPickup())
-    addSmoothPickupCondition(new StackSmoothPickupPredicate())
+    addSmoothItemPickupCondition(new StackSmoothPickupPredicate())
