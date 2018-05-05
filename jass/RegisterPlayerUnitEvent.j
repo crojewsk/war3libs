@@ -63,7 +63,7 @@ function RegisterPlayerUnitEvent takes player whichPlayer, playerunitevent which
     local integer playerId = GetPlayerId(whichPlayer)
     local integer eventId = GetHandleId(whichEvent)
 
-    if RegisterNativeEventTrigger(playerId,eventId) then
+    if RegisterNativeEventTrigger(playerId, eventId) then
         call TriggerRegisterPlayerUnitEvent(GetIndexNativeEventTrigger(playerId, eventId), whichPlayer, whichEvent, null)
     endif
 

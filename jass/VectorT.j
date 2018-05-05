@@ -178,30 +178,8 @@ $ACCESS$ struct $NAME$ extends array
 
     static method create takes nothing returns thistype
         local thistype this = allocate()
-
         set table = Table.create()
         set length = 0
-
-        return this
-    endmethod
-
-    method empty takes nothing returns boolean
-        return length == 0
-    endmethod
-
-    method size takes nothing returns integer
-        return length
-    endmethod
-
-    static method operator [] takes thistype other returns thistype
-        local thistype this = create()
-
-        loop
-            exitwhen length >= other.size()
-            call seT(length, other[length])
-            set length = length + 1
-        endloop
-
         return this
     endmethod
 
@@ -230,6 +208,14 @@ $ACCESS$ struct $NAME$ extends array
         return this.table
     endmethod
 
+    method empty takes nothing returns boolean
+        return length == 0
+    endmethod
+
+    method size takes nothing returns integer
+        return length
+    endmethod
+
     method push takes $TYPE$ value returns thistype
         call seT(length, value)
         set length = length + 1
@@ -244,6 +230,17 @@ $ACCESS$ struct $NAME$ extends array
         endif
 
         return this
+    endmethod
+
+    static method operator [] takes thistype other returns thistype
+        local thistype instance = create()
+
+        loop
+            exitwhen instance.size() >= other.size()
+            call instance.push(other[instance.size()])
+        endloop
+
+        return instance
     endmethod
 
     method assign takes integer count, $TYPE$ value returns thistype
@@ -313,11 +310,7 @@ $ACCESS$ struct $NAME$ extends array
     method resize takes integer count returns thistype
         local $TYPE$ value
         if count > length then
-            set value = get(-1)
-            loop
-                exitwhen length >= count
-                call push(value)
-            endloop
+            set length = count
         elseif count >= 0 then
             loop
                 exitwhen length <= count

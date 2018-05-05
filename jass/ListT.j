@@ -333,16 +333,16 @@ $ACCESS$ struct $NAME$ extends array
     endmethod
 
     static method operator [] takes thistype other returns thistype
-        local thistype this = create()
+        local thistype instance = create()
         local $NAME$Item node = other.first
 
         loop
             exitwhen node == 0
-            call push(node.data)
+            call instance.push(node.data)
             set node = node.next
         endloop
 
-        return this
+        return instance
     endmethod
 
     method find takes $TYPE$ value returns $NAME$Item
