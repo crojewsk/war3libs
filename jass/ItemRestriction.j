@@ -1,580 +1,768 @@
-library UnitItemRestriction requires /*
-                          */ Alloc /*
-						  */ ListT /*
-						  */ SimError /*  
-						  */ RegisterPlayerUnitEvent
+/*****************************************************************************
+*
+*    ItemRestriction v1.1.0.0
+*       by Bannar
+*
+*    For restricting or limiting items from being equipped.
+*
+******************************************************************************
+*
+*    Requirements:
+*
+*       Alloc - choose whatever you like
+*          e.g.: by Sevion hiveworkshop.com/threads/snippet-alloc.192348/
+*
+*       ListT by Bannar
+*          hiveworkshop.com/threads/containers-list-t.249011/
+*
+*       RegisterPlayerUnitEvent by Bannar
+*          hiveworkshop.com/forums/jass-resources-412/snippet-new-table-188084/
+*
+*       SimError by Vexorian
+*          wc3c.net/showthread.php?t=101260&highlight=SimError
+*
+******************************************************************************
+*
+*    Configurable error messages:
+*
+*       function GetUnitTypeErrorMessage takes UnitRequirement requirement, integer unitId returns string
+*       function GetLevelErrorMessage takes UnitRequirement requirement, integer level returns string
+*       function GetStatisticErrorMessage takes UnitRequirement requirement, integer value, string statistic returns string
+*       function GetLimitErrorMessage takes ItemRestriction restriction, integer limit returns string
+*       function GetExclusiveErrorMessage takes ItemRestriction first, ItemRestriction second returns string
+*       function GetForbiddenErrorMessage takes ItemRestriction restriction returns string
+*
+******************************************************************************
+*
+*    Interface UnitRequirementPredicate:
+*
+*       method isMet takes unit whichUnit returns string
+*          Returns null if criteria are met and error message if not.
+*
+*       module UnitRequirementPredicateModule
+*          Declares body for new predicate type.
+*
+*
+*    Predicate implementation example:
+*
+*        | struct MyPredicate extends array
+*        |     method isMet takes unit whichUnit returns string
+*        |         return "This unit does not meet requirement criteria"
+*        |     endmethod
+*        |
+*        |     implement SmoothPickupPredicateModule
+*        | endstruct
+*
+******************************************************************************
+*
+*    struct UnitRequirement:
+*
+*       Fields:
+*
+*        | IntegerList typeIds
+*        |    Unit type requirement, omitted if empty.
+*        |
+*        | integer level
+*        |    Unit level requirement.
+*        |
+*        | integer strength
+*        |    Hero strength requirement.
+*        |
+*        | integer agility
+*        |    Hero agility requirement.
+*        |
+*        | integer intelligence
+*        |    Hero intelligence requirement.
+*        |
+*        | boolean includeBonuses
+*        |    Whether to include bonuses when checking unit staticstics.
+*        |
+*        | string name
+*        |    Name associated with requirement.
+*
+*
+*       Methods:
+*
+*        | static method create takes string name returns thistype
+*        |    Default ctor.
+*        |
+*        | method destroy takes nothing returns nothing
+*        |    Default dctor.
+*        |
+*        | method has takes integer unitTypeId returns boolean
+*        |    Whether specified unit type is a part of requirement.
+*        |
+*        | method requireStat takes integer str, integer agi, integer int returns thistype
+*        |    Sets hero statistic requirements to specified values.
+*        |
+*        | method addCondition takes UnitRequirementPredicate predicate returns nothing
+*        |    Adds new criteria to requirement criterias.
+*        |
+*        | method removeCondition takes UnitRequirementPredicate predicate returns nothing
+*        |    Removes specified condition from requirement criterias.
+*        |
+*        | method test takes unit whichUnit returns string
+*        |    Validates whether specified unit meets this unit requirements.
+*        |
+*        | method filter takes unit whichUnit returns boolean
+*        |    Returns value indicating whether specified unit successfully passed requirement test.
+*
+*
+*    struct ItemRestriction:
+*
+*       Fields:
+*
+*        | IntegerList typeIds
+*        |    Item types that enforce this restriction.
+*        |
+*        | integer limit
+*        |    Maximum number of items a unit can carry.
+*        |
+*        | LimitExceptionList exceptions
+*        |    Collection of UnitRequirement instances that may define different limits.
+*        |    Example: berserker may carry two 2H-weapons, rather than one.
+*        |
+*        | ItemRestrictionList exclusives
+*        |    Collection of ItemRestriction instances that exclude each other from being picked.
+*        |    Example: a unit cannot carry both 1H-weapons and 2H-weapons at the same time.
+*        |
+*        | UnitRequirement requirement
+*        |    Requirement a unit must meet to hold items.
+*        |
+*        | string name
+*        |    Name associated with restriction.
+*
+*
+*       Methods:
+*
+*        | static method create takes string name, integer limit returns thistype
+*        |    Default ctor.
+*        |
+*        | method destroy takes nothing returns nothing
+*        |    Default dctor.
+*        |
+*        | method has takes integer itemTypeId returns boolean
+*        |    Whether specified item type is a part of restriction.
+*        |
+*        | method removeItem takes integer itemTypeId returns thistype
+*        |    Remove specified item type from this restriction.
+*        |
+*        | method addItem takes integer itemTypeId returns thistype
+*        |    Add specified item type to this restriction.
+*        |
+*        | method removeException takes UnitRequirement requirement returns thistype
+*        |    Removes item limit exception for specified requirement.
+*        |
+*        | method addException takes UnitRequirement requirement, integer newLimit returns thistype
+*        |    Adds new item limit exception for specified requirement.
+*        |
+*        | method removeExclusive takes ItemRestriction restriction returns thistype
+*        |    Makes specified restriction non-exclusive with this restriction.
+*        |
+*        | method addExclusive takes ItemRestriction restriction returns thistype
+*        |    Makes specified restriction exclusive with this restriction.
+*        |
+*        | method getCount takes unit whichUnit returns integer
+*        |    Returns related to this restriction, current item count for specified unit.
+*        |
+*        | method getException takes unit whichUnit returns LimitException
+*        |    Returns currently chosen limit exception if any for specified unit.
+*        |
+*        | method test takes unit whichUnit, item whichItem returns string
+*        |    Validates whether specified unit can hold specified itm given the restriction criteria.
+*        |
+*        | method filter takes unit whichUnit, item whichItem returns boolean
+*        |    Returns value indicating whether specified unit successfully
+*        |    passed restriction test for specified item.
+*
+*
+*****************************************************************************/
+library ItemRestriction requires /*
+                        */ Alloc /*
+                        */ ListT /*
+                        */ RegisterPlayerUnitEvent /*
+                        */ SimError
 
-globals
-	private Table Restrictions = 0
-endglobals
-
-private function GetUnitTypeErrorMessage takes integer unitId returns string
-	return "This item can not be hold by this unit type."
+private function GetUnitTypeErrorMessage takes UnitRequirement requirement, integer unitId returns string
+    return "This item can not be hold by this unit type."
 endfunction
 
-private function GetLevelErrorMessage takes integer level returns string
-	return "This item requires level "+I2S(level)+" to be picked up."
+private function GetLevelErrorMessage takes UnitRequirement requirement, integer level returns string
+    return "This item requires level " + I2S(level) + " to be picked up."
 endfunction
 
-private function GetStatisticErrorMessage takes integer value, string statistic returns string
-	return "This item requires "+I2S(value)+" "+statistic+"."
+private function GetStatisticErrorMessage takes UnitRequirement requirement, integer value, string statistic returns string
+    return "This item requires " + I2S(value) + " " + statistic + "."
 endfunction
 
-private function GetLimitErrorMessage takes integer limit returns string
-	return "This unit can not hold more items of this item type."
+private function GetLimitErrorMessage takes ItemRestriction restriction, integer limit returns string
+    return "This unit can not hold more than " + I2S(limit) + " item(s) of " + restriction.name + "."
 endfunction
 
-private constant function GetExclusiveErrorMessage takes nothing returns string
-	return "This unit has an item of exclusive type."
+private constant function GetExclusiveErrorMessage takes ItemRestriction first, ItemRestriction second returns string
+    return "This unit cannot hold items of type \"" + first.name + "\" and \"" + second.name + "\" at the same time."
 endfunction
 
-private constant function GetForbiddenErrorMessage takes nothing returns string
-	return "This item can not be picked up by this unit."
+private constant function GetForbiddenErrorMessage takes ItemRestriction restriction returns string
+    return "This item can not be picked up by this unit."
 endfunction
 
-private module ItemRestrictionInit
-	private static method onInit takes nothing returns nothing
-		/*set Restrictions = Table.create()
-		set Requirements = Table.create()
-		set Restrictions[0] = IntegerList.create() // global list
-		set Requirements[0] = IntegerList.create() // global list
-		set Restrictions[-1] = IntegerList.create() // association checking on pick up event
+struct UnitRequirementPredicate extends array
+    implement Alloc
 
-		call RegisterPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function thistype.onPickUp)
-		call RegisterPlayerUnitEvent(EVENT_PLAYER_UNIT_DROP_ITEM, function thistype.onDrop)
-		call RegisterPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, function thistype.onOrder)
-        call RegisterUnitIndexEvent(Condition(function thistype.onDeindex), EVENT_UNIT_DEINDEX)*/
-	endmethod
+    method isMet takes unit whichUnit returns string
+        return null
+    endmethod
+
+    static method create takes nothing returns thistype
+        return allocate()
+    endmethod
+
+    method destroy takes nothing returns nothing
+        call deallocate()
+    endmethod
+endstruct
+
+module UnitRequirementPredicateModule
+    private delegate UnitRequirementPredicate predicate
+
+    static method create takes nothing returns thistype
+        local thistype this = UnitRequirementPredicate.create()
+        set predicate = this
+        return this
+    endmethod
+
+    method destroy takes nothing returns nothing
+        call predicate.destroy()
+    endmethod
 endmodule
 
 struct UnitRequirement extends array
-	readonly IntegerList typeIds
-	integer level
-	integer strength
-	integer agility
-	integer intelligence
-	boolean includeBonuses
+    readonly IntegerList typeIds
+    integer level
+    integer strength
+    integer agility
+    integer intelligence
+    boolean includeBonuses
+    string name
+    private IntegerList conditions
 
-	implement Alloc
+    implement Alloc
 
-	static method create takes nothing returns thistype
-		local thistype this = allocate()
+    static method create takes string name returns thistype
+        local thistype this = allocate()
 
-		set typeIds = IntegerList.create()
-		set level = 0
-		set strength = 0
-		set agility = 0
-		set intelligence = 0
+        set typeIds = IntegerList.create()
+        set level = 0
+        set strength = 0
+        set agility = 0
+        set intelligence = 0
         set includeBonuses = false
+        set this.name = name
+        set conditions = IntegerList.create()
 
-		return this
-	endmethod
+        return this
+    endmethod
 
-	method destroy takes nothing returns nothing
-		call typeIds.destroy()
-		call deallocate()
-	endmethod
+    method destroy takes nothing returns nothing
+        set name = null
+        call typeIds.destroy()
+        call conditions.destroy()
+        call deallocate()
+    endmethod
 
-	method has takes integer unitTypeId returns boolean
-		return typeIds.find(unitTypeId) != 0
-	endmethod
+    method has takes integer unitTypeId returns boolean
+        return typeIds.find(unitTypeId) != 0
+    endmethod
 
-	method requireStat takes integer str, integer agi, integer int returns thistype
-		set strength = str
-		set agility = agi
-		set intelligence = int
+    method requireStat takes integer str, integer agi, integer int returns thistype
+        set strength = str
+        set agility = agi
+        set intelligence = int
 
-		return this
-	endmethod
+        return this
+    endmethod
 
-	method test takes unit u returns string
-		local integer unitTypeId = GetUnitTypeId(u)
+    method addCondition takes UnitRequirementPredicate predicate returns nothing
+        if predicate != 0 then
+            call conditions.push(predicate)
+        endif
+    endmethod
 
-		if (not typeIds.empty() and not has(unitTypeId)) then
-			return GetUnitTypeErrorMessage(unitTypeId)
-		elseif (level > 0 and GetHeroLevel(u) < level) then
-			return GetLevelErrorMessage(level)
-		elseif (strength > 0 and GetHeroStr(u, includeBonuses) < strength) then
-			return GetStatisticErrorMessage(strength, "Strength")
-		elseif (agility > 0 and GetHeroAgi(u, includeBonuses) < agility) then
-			return GetStatisticErrorMessage(agility, "Agility")
-		elseif (intelligence > 0 and GetHeroInt(u, includeBonuses) < intelligence) then
-			return GetStatisticErrorMessage(intelligence, "Intelligence")
-		endif
+    method removeCondition takes UnitRequirementPredicate predicate returns nothing
+        if predicate != 0 then
+            call conditions.remove(conditions.find(predicate))
+        endif
+    endmethod
 
-		return null
-	endmethod
+    method test takes unit whichUnit returns string
+        local integer unitTypeId = GetUnitTypeId(whichUnit)
+        local IntegerListItem iter
+        local UnitRequirementPredicate condition
+        local string errorMessage
 
-    method filter takes unit u returns boolean
-        return test(u) == null
+        if not typeIds.empty() and not has(unitTypeId) then
+            return GetUnitTypeErrorMessage(this, unitTypeId)
+        elseif level > 0 and GetHeroLevel(whichUnit) < level then
+            return GetLevelErrorMessage(this, level)
+        elseif strength > 0 and GetHeroStr(whichUnit, includeBonuses) < strength then
+            return GetStatisticErrorMessage(this, strength, "Strength")
+        elseif agility > 0 and GetHeroAgi(whichUnit, includeBonuses) < agility then
+            return GetStatisticErrorMessage(this, agility, "Agility")
+        elseif intelligence > 0 and GetHeroInt(whichUnit, includeBonuses) < intelligence then
+            return GetStatisticErrorMessage(this, intelligence, "Intelligence")
+        endif
+
+        set iter = conditions.first
+        loop
+            exitwhen iter == 0
+            set condition = iter.data
+            set errorMessage = condition.isMet(whichUnit)
+            if errorMessage != null then
+                return errorMessage
+            endif
+            set iter = iter.next
+        endloop
+
+        return null
+    endmethod
+
+    method filter takes unit whichUnit returns boolean
+        return test(whichUnit) == null
     endmethod
 endstruct
+
+//! runtextmacro DEFINE_STRUCT_LIST("", "LimitExceptionList", "LimitException")
+//! runtextmacro DEFINE_STRUCT_LIST("", "ItemRestrictionList", "ItemRestriction")
+
+globals
+    private Table restrictionTable = 0
+endglobals
+
+private module ItemRestrictionInit
+    private static method onInit takes nothing returns nothing
+        // For extra speed, each item type involved will have separate list assigned
+        set restrictionTable = Table.create()
+        // Global instance list for handling deindex event
+        set restrictionTable[0] = ItemRestrictionList.create()
+
+        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function thistype.onPickup)
+        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_DROP_ITEM, function thistype.onDrop)
+        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, function thistype.onTargetOrder)
+        call RegisterUnitIndexEvent(Condition(function thistype.onDeindex), EVENT_UNIT_DEINDEX)
+    endmethod
+endmodule
 
 struct LimitException extends array
     UnitRequirement requirement
     integer newLimit
 
-    //implement Alloc
+    implement Alloc
 
     static method create takes UnitRequirement requirement, integer newLimit returns thistype
-        local thistype this = 0// allocate()
-
+        local thistype this = allocate()
         set this.requirement = requirement
         set this.newLimit = newLimit
-
         return this
     endmethod
     
     method destroy takes nothing returns nothing
+        call deallocate()
     endmethod
 endstruct
 
 struct ItemRestriction extends array
-	private Table cache
-	readonly IntegerList typeIds
-	integer limit
-	readonly IntegerList exceptions
-	readonly IntegerList exclusives
+    private Table cache
+    readonly IntegerList typeIds
+    integer limit
+    readonly LimitExceptionList exceptions
+    readonly ItemRestrictionList exclusives
     UnitRequirement requirement
-	string name
+    string name
 
-	implement Alloc
+    implement Alloc
 
-	static method create takes string name, integer limit, UnitRequirement requirement returns thistype
-		local thistype this = allocate()
+    static method create takes string name, integer limit returns thistype
+        local thistype this = allocate()
 
-		set cache = Table.create()
-		set typeIds = IntegerList.create()
-		set exceptions = IntegerList.create()
-		set exclusives = IntegerList.create()
-		set this.name = name
+        set cache = Table.create()
+        set typeIds = IntegerList.create()
+        set exceptions = LimitExceptionList.create()
+        set exclusives = ItemRestrictionList.create()
+        set this.name = name
         set this.limit = limit
-        set this.requirement = requirement
+        set this.requirement = 0
 
-        call IntegerList(Restrictions[0]).push(this)
+        call ItemRestrictionList(restrictionTable[0]).push(this)
 
-		return this
-	endmethod
+        return this
+    endmethod
 
-	method destroy takes nothing returns nothing
-		local IntegerList restrictions
-		local IntegerListItem node
-		local IntegerListItem entry
-		local ItemRestriction restriction
+    method destroy takes nothing returns nothing
+        local ItemRestrictionList restrictions
+        local ItemRestrictionListItem iter
+        local ItemRestrictionListItem node
+        local ItemRestriction exclusive
 
-        set node = typeIds.first
+        set iter = typeIds.first
         loop
-            exitwhen node == 0
-            set restrictions = Restrictions[node.data]
-            set entry = restrictions.find(this)
-            call restrictions.remove(entry)
-            set node = node.next
+            exitwhen iter == 0
+            set restrictions = restrictionTable[iter.data]
+            set node = restrictions.find(this)
+            call restrictions.remove(node)
+            if restrictions.empty() then
+                call restrictions.destroy()
+                call restrictionTable.remove(iter.data)
+            endif
+            set iter = iter.next
         endloop
 
-        set restrictions = Restrictions[0]
-        set entry = restrictions.find(this)
-        call restrictions.remove(entry)
+        set restrictions = restrictionTable[0]
+        set node = restrictions.find(this)
+        call restrictions.remove(node)
 
-		if not exclusives.empty() then
-			set node = exclusives.first
-			loop
-				exitwhen node == 0
-				set restriction = node.data
-				set entry = restriction.exclusives.find(this)
-				call restriction.exclusives.remove(entry)
-				set node = node.next
-			endloop
-		endif
+        if not exclusives.empty() then
+            set iter = exclusives.first
+            loop
+                exitwhen iter == 0
+                set exclusive = iter.data
+                set node = exclusive.exclusives.find(this)
+                call exclusive.exclusives.remove(node)
+                set iter = iter.next
+            endloop
+        endif
 
-		call cache.destroy()
-		call typeIds.destroy()
-		call exceptions.destroy()
-		call exclusives.destroy()
+        call cache.destroy()
+        call typeIds.destroy()
+        call exceptions.destroy()
+        call exclusives.destroy()
         set name = null
         set limit = 0
+        call deallocate()
+    endmethod
 
-		call deallocate()
-	endmethod
+    method has takes integer itemTypeId returns boolean
+        return typeIds.find(itemTypeId) != 0
+    endmethod
 
-	method has takes integer itemTypeId returns boolean
-		return typeIds.find(itemTypeId) != 0
-	endmethod
+    method removeItem takes integer itemTypeId returns thistype
+        local ItemRestrictionList restrictions
+        local ItemRestrictionListItem node
 
-	method removeTypeId takes integer itemTypeId returns thistype
-		local IntegerListItem node = typeIds.find(itemTypeId)
+        if has(itemTypeId) then
+            call typeIds.remove(typeIds.find(itemTypeId))
 
-		if node != 0 then
-            call typeIds.remove(node)
-		endif
+            set restrictions = restrictionTable[itemTypeId]
+            set node = restrictions.find(this)
+            call restrictions.remove(node)
+            if restrictions.empty() then
+                call restrictions.destroy()
+                call restrictionTable.remove(itemTypeId)
+            endif
+        endif
 
-		return this
-	endmethod
+        return this
+    endmethod
 
-	method addTypeId takes integer itemTypeId returns thistype
-		local IntegerListItem node = 0
-		local IntegerList restrictions
+    method addItem takes integer itemTypeId returns thistype
+        local ItemRestrictionList restrictions
 
         if itemTypeId <= 0 then
             return this
         endif
 
-		if node == 0 then
+        if not has(itemTypeId) then
             call typeIds.push(itemTypeId)
 
-			set restrictions = Restrictions[itemTypeId]
-			if restrictions == 0 then
-				set restrictions = IntegerList.create()
-				call restrictions.push(this)
-                set Restrictions[itemTypeId] = restrictions
-			elseif restrictions.find(this) == 0 then
-				call restrictions.push(this)
-			endif
-		endif
+            if not restrictionTable.has(itemTypeId) then
+                set restrictions = ItemRestrictionList.create()
+                call restrictions.push(this)
+                set restrictionTable[itemTypeId] = restrictions
+            else
+                set restrictions = restrictionTable[itemTypeId]
+                if restrictions.find(this) == 0 then
+                    call restrictions.push(this)
+                endif
+            endif
+        endif
 
-		return this
-	endmethod
+        return this
+    endmethod
 
-	method removeException takes UnitRequirement requirement returns thistype
-		local IntegerListItem node = exceptions.first
+    method removeException takes UnitRequirement requirement returns thistype
+        local LimitExceptionListItem iter = exceptions.first
         local LimitException exception
 
         loop
-            exitwhen node == 0
-            set exception = node.data
+            exitwhen iter == 0
+            set exception = iter.data
             if exception.requirement == requirement then
-                call exceptions.remove(node)
+                call exceptions.remove(iter)
                 call exception.destroy()
                 exitwhen true
             endif
-            set node = node.next
+            set iter = iter.next
         endloop
 
-		return this
-	endmethod
+        return this
+    endmethod
 
-	method addException takes UnitRequirement requirement, integer newLimit returns thistype
-		local IntegerListItem node = exceptions.first
+    method addException takes UnitRequirement requirement, integer newLimit returns thistype
+        local LimitExceptionListItem iter = exceptions.first
         local LimitException exception
         local LimitException entry
 
         loop
-            exitwhen node == 0
-            set exception = node.data
+            exitwhen iter == 0
+            set exception = iter.data
             if exception.requirement == requirement then
                 set entry = exception
                 exitwhen true
             endif
-            set node = node.next
+            set iter = iter.next
         endloop
 
         if entry == 0 then
             call exceptions.push(LimitException.create(requirement, newLimit))
         endif
-		return this
-	endmethod
+        return this
+    endmethod
 
-	method removeExclusive takes ItemRestriction restriction returns thistype
-		local IntegerListItem node = exclusives.find(restriction)
+    method removeExclusive takes ItemRestriction restriction returns thistype
+        local ItemRestrictionListItem node = exclusives.find(restriction)
 
-		if ( node != 0 ) then
-			call exclusives.remove(node)
-			set node = restriction.exclusives.find(this)
-			call restriction.exclusives.remove(node)
-		endif
+        if node != 0 then
+            call exclusives.remove(node)
+            set node = restriction.exclusives.find(this)
+            call restriction.exclusives.remove(node)
+        endif
 
-		return this
-	endmethod
+        return this
+    endmethod
 
-	method addExclusive takes ItemRestriction restriction returns thistype
-		if exclusives.find(restriction) == 0 then
-			call exclusives.push(restriction)
-			call restriction.exclusives.push(this)
-		endif
+    method addExclusive takes ItemRestriction restriction returns thistype
+        if restriction != 0 and exclusives.find(restriction) == 0 then
+            call exclusives.push(restriction)
+            call restriction.exclusives.push(this)
+        endif
 
-		return this
-	endmethod
+        return this
+    endmethod
 
-    method getCount takes unit u returns integer
-        return cache[GetUnitId(u)]
+    method getCount takes unit whichUnit returns integer
+        return cache[GetUnitId(whichUnit)]
     endmethod
 
     private method setCount takes unit u, integer count returns nothing
         set cache[GetUnitId(u)] = count
     endmethod
 
-    private method getException takes unit u returns LimitException
-        return cache[-GetUnitId(u)]
+    method getException takes unit whichUnit returns LimitException
+        return cache[-GetUnitId(whichUnit)]
     endmethod
 
     private method setException takes unit u, LimitException exception returns nothing
         set cache[-GetUnitId(u)] = exception
     endmethod
 
-	/*private method test takes unit u, item itm returns string
-		local integer index = GetUnitId(u)
-		local IntegerListItem node
-		local ItemRestriction exclusive
-		local UnitRequirement exception = 0
-		local integer count
-		local integer threshold = limit
+    method test takes unit whichUnit, item whichItem returns string
+        local LimitException exception = 0
+        local integer threshold = limit
         local string errorMessage
+        local IntegerListItem iter
+        local ItemRestriction exclusive
 
-        if not has(GetItemTypeId(itm) then
+        if not has(GetItemTypeId(whichItem)) then
             return null
-        else if requirement != 0 then
-            set errorMessage = requirement.test(u)
-            if errorMessage != null
+        elseif requirement != 0 then
+            set errorMessage = requirement.test(whichUnit)
+            if errorMessage != null then
                 return errorMessage
             endif
         endif
 
-		set node = exclusives.first
-		loop // checkout all exclusives linked with this restriction
-			exitwhen node == 0
-			set exclusive = node.data
+        set iter = exclusives.first
+        loop
+            exitwhen iter == 0
+            set exclusive = iter.data
+            if exclusive.getCount(whichUnit) > 0 then
+                return GetExclusiveErrorMessage(this, exclusive)
+            endif
 
-			if ( exclusive.storage[index] > 0 ) then
-				return GetExclusiveErrorMessage() // collapse, exclusive found
-			endif
+            set iter = iter.next
+        endloop
 
-			set node = node.next
-		endloop
+        if not exceptions.empty() then
+            set exception = getException(whichUnit)
+            if exception == 0 or exceptions.find(exception) == 0 then
+                call setException(whichUnit, 0)
 
-		if ( not exceptions.empty() ) then
-			set exception = storage[-index] // checkout out if exceptions is already stored for this unit
+                set iter = exceptions.first
+                loop
+                    exitwhen iter == 0
+                    set exception = iter.data
 
-			if ( exception == 0 or exceptions.find(exception) == 0 ) then // else: hasn't been removed by user
-				set storage[-index] = 0
-				set node = exceptions.first // find new exception
-
-				loop
-					set exception = node.data
-					exitwhen exception == 0
-
-					if ( exception.match(u) == null ) then
-						set storage[-index] = exception
-						exitwhen true
-					endif
-
-					set node = node.next
-				endloop
-			endif
-		endif
-
-		if ( exception != 0 ) then // this is why in loop's above, i didn't use 'exitwhen node == 0'
-			set threshold = storage[exception+8191]
-		endif
-
-		set count = storage[index]
-		if ( threshold < 0 ) then
-			return GetForbiddenErrorMessage() // collapse, not even 1 item allowed
-		elseif ( threshold > 0 and count >= threshold ) then
-			return GetLimitErrorMessage(threshold)
-		endif
-
-		return null
-	endmethod
-
-	private static method evaluateRestrictions takes unit u, item it returns IntegerList
-		local IntegerList list
-		local IntegerListItem node
-		local ItemRestriction restriction
-		local string message
-		local IntegerList associated = Restrictions[-1] // error list
-
-		call associated.clear()
-		set list = Restrictions[0] // global list
-		set node = list.first
-		loop
-			exitwhen node == 0
-			set restriction = node.data
-			set message = restriction.enforce(u)
-
-			if ( message != null ) then
-				call SimError(GetOwningPlayer(u), message)
-				set message = null
-				return 0
-			else
-				call associated.push(restriction)
-			endif
-
-			set node = node.next
-		endloop
-
-		set list = Restrictions[GetItemTypeId(it)]
-        if ( list != 0 ) then
-            set node = list.first
-            loop
-                exitwhen node == 0
-                set restriction = node.data
-                set message = restriction.enforce(u)
-
-                if ( message != null ) then
-                    call SimError(GetOwningPlayer(u), message)
-                    set message = null
-                    return 0
-                else
-                    call associated.push(restriction)
-                endif
-
-                set node = node.next
-            endloop
-        endif
-
-		set message = null
-		return associated
-	endmethod
-
-	private static method evaluateRequirements takes unit u, item it returns boolean
-		local IntegerList list
-		local IntegerListItem node
-		local UnitRequirement requirement
-		local string message
-
-		set list = Requirements[0] // global item requirements
-		set node = list.first
-		loop
-			exitwhen node == 0
-			set requirement = node.data
-			set message = requirement.match(u)
-
-			if ( message != null ) then
-				call SimError(GetOwningPlayer(u), message)
-				set message = null
-				return false
-			endif
-
-			set node = node.next
-		endloop
-
-		set list = Requirements[GetItemTypeId(it)]
-        if ( list != 0 ) then
-            set node = list.first
-            loop
-                exitwhen node == 0
-                set requirement = node.data
-                set message = requirement.match(u)
-
-                if ( message != null ) then
-                    call SimError(GetOwningPlayer(u), message)
-                    set message = null
-                    return false
-                endif
-
-                set node = node.next
-            endloop
-        endif
-
-		set message = null
-		return true
-	endmethod
-
-	private static method onPickUp takes nothing returns boolean
-		local item it = GetManipulatedItem()
-		local unit u
-		local IntegerList associated
-		local IntegerListItem node
-		local ItemRestriction restriction
-		local integer count
-		local integer index
-		local trigger t
-
-		if ( not IsItemPowerup(it) ) then
-			set u = GetTriggerUnit()
-			set associated = evaluateRestrictions(u, it)
-
-			if ( associated != 0 and evaluateRequirements(u, it) ) then
-				if ( not associated.empty() ) then
-					set index = GetUnitId(u)
-					set node = associated.first
-
-					loop // increase count only if all the checks succeeded
-						exitwhen node == 0
-						set restriction = node.data
-						set count = restriction.storage[index]
-						set restriction.storage[index] = count + 1
-						set node = node.next
-					endloop
-				endif
-			else
-				set t = GetPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_DROP_ITEM)
-				call DisableTrigger(t)
-				call UnitRemoveItem(u, it)
-				call EnableTrigger(t)
-				set t = null
-			endif
-
-			set u = null
-		endif
-
-		set it = null
-		return false
-	endmethod
-
-	private static method onDrop takes nothing returns boolean
-		local integer itemId = GetItemTypeId(GetManipulatedItem())
-		local integer index = GetUnitId(GetTriggerUnit())
-		local IntegerList restrictions
-		local IntegerListItem node
-		local integer count
-		local ItemRestriction restriction
-
-		set restrictions = Restrictions[0] // check out global list first
-		set node = restrictions.first
-		loop
-			exitwhen node == 0
-			set restriction = node.data
-			set count = restriction.storage[index]
-
-			if ( count > 0 ) then
-				set restriction.storage[index] = count - 1
-			endif
-
-			set node = node.next
-		endloop
-
-		set restrictions = Restrictions[itemId]
-        if ( restrictions != 0 ) then
-            set node = restrictions.first
-            loop
-                exitwhen node == 0
-                set restriction = node.data
-
-                if ( restriction.belongs(itemId) ) then
-                    set count = restriction.storage[index]
-                    if ( count > 0 ) then
-                        set restriction.storage[index] = count - 1
+                    if exception.requirement.filter(whichUnit) then
+                        call setException(whichUnit, exception)
+                        exitwhen true
                     endif
-                endif
 
-                set node = node.next
-            endloop
+                    set iter = iter.next
+                endloop
+            endif
         endif
 
-		return false
-	endmethod
+        if exception != 0 then
+            set threshold = exception.newLimit
+        endif
 
-	private static method onOrder takes nothing returns boolean
-		local item it = GetOrderTargetItem()
-		local unit u
+        if threshold <= 0 then
+            return GetForbiddenErrorMessage(this)
+        elseif getCount(whichUnit) >= threshold then
+            return GetLimitErrorMessage(this, threshold)
+        endif
 
-		if ( GetIssuedOrderId() == 851971 and it != null ) then // order 'Smart' on an item
-			set u = GetTriggerUnit()
+        return null
+    endmethod
 
-			if ( evaluateRestrictions(u, it) == 0 or not evaluateRequirements(u, it) ) then
-				call PauseUnit(u, true)
-				call IssueImmediateOrderById(u, 851972)
-				call PauseUnit(u, false)
-			endif
+    method filter takes unit whichUnit, item whichItem returns boolean
+        return test(whichUnit, whichItem) == null
+    endmethod
 
-			set it = null
-			set u = null
-		endif
+    // Returns null (not allowed), empty list (no restrictions) or
+    // non-empty list (restrictions to increase count for).
+    // Caller is responsible for destroying retrieved list if any
+    private static method evaluateRestrictions takes unit u, item itm returns ItemRestrictionList
+        local ItemRestrictionList associated = ItemRestrictionList.create()
+        local ItemRestrictionListItem iter
+        local ItemRestriction restriction
+        local integer itemTypeId = GetItemTypeId(itm)
+        local string errorMessage
 
-		return false
-	endmethod
+        if not restrictionTable.has(itemTypeId) then
+            return associated
+        endif
 
-	implement ItemRestrictionInit*/
+        set iter = ItemRestrictionList(restrictionTable[itemTypeId]).first
+        loop
+            exitwhen iter == 0
+            set restriction = iter.data
+            set errorMessage = restriction.test(u, itm)
+
+            if errorMessage != null then      
+                call SimError(GetOwningPlayer(u), errorMessage)
+                call associated.destroy()
+                return 0
+            endif
+
+            call associated.push(restriction)
+            set iter = iter.next
+        endloop
+
+        return associated
+    endmethod
+
+    private static method onPickup takes nothing returns boolean
+        local item itm = GetManipulatedItem()
+        local integer count
+        local unit u
+        local ItemRestrictionList associated
+        local ItemRestrictionListItem iter
+        local ItemRestriction restriction
+        local trigger t
+
+        if not IsItemPowerup(itm) then
+            set u = GetTriggerUnit()
+            set associated = evaluateRestrictions(u, itm)
+
+            if associated != 0 then
+                set iter = associated.first
+                loop
+                    exitwhen iter == 0
+                    set restriction = iter.data
+                    set count = restriction.getCount(u)
+                    call restriction.setCount(u, count + 1)
+                    set iter = iter.next
+                endloop
+                call associated.destroy()
+            else
+                set t = GetAnyPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_DROP_ITEM)
+                call DisableTrigger(t)
+                call UnitRemoveItem(u, itm)
+                call EnableTrigger(t)
+                set t = null
+            endif
+
+            set u = null
+        endif
+
+        set itm = null
+        return false
+    endmethod
+
+    private static method onDrop takes nothing returns boolean
+        local integer itemTypeId = GetItemTypeId(GetManipulatedItem())
+        local ItemRestrictionListItem iter
+        local integer count
+        local unit u
+        local ItemRestriction restriction
+
+        if not restrictionTable.has(itemTypeId) then
+            return false
+        endif
+
+        set iter = ItemRestrictionList(restrictionTable[itemTypeId]).first
+        set u = GetTriggerUnit()
+        loop
+            exitwhen iter == 0
+            set restriction = iter.data
+            set count = restriction.getCount(u)
+
+            if count > 0 then
+                call restriction.setCount(u, count - 1)
+            endif
+
+            set iter = iter.next
+        endloop
+
+        return false
+    endmethod
+
+    private static method onTargetOrder takes nothing returns boolean
+        local item itm = GetOrderTargetItem()
+        local unit u
+
+        if GetIssuedOrderId() == 851971 and itm != null then // order smart
+            set u = GetTriggerUnit()
+            if evaluateRestrictions(u, itm) == 0 and not IsUnitPaused(u) then
+                call PauseUnit(u, true)
+                call IssueImmediateOrderById(u, 851972) // order stop
+                call PauseUnit(u, false)
+            endif
+
+            set itm = null
+            set u = null
+        endif
+
+        return false
+    endmethod
+
+    private static method onDeindex takes nothing returns nothing
+        local integer index = GetIndexedUnitId()
+        local ItemRestrictionListItem iter = ItemRestrictionList(restrictionTable[0]).first
+        local ItemRestriction restriction
+
+        loop
+            exitwhen iter == 0
+            set restriction = iter.data
+            if restriction.cache.has(index) then
+                call restriction.cache.flush()
+            endif
+            set iter = iter.next
+        endloop
+    endmethod
+
+    implement ItemRestrictionInit
 endstruct
 
 endlibrary
