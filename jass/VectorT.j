@@ -145,19 +145,19 @@ $ACCESS$ struct $NAME$ extends array
     endmethod
 
     private method assert_pos takes integer pos, string f returns boolean
-        debug if ( pos < 0 and pos >= length ) then
+        debug if pos < 0 and pos >= length then
             debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"$NAME$::assert_pos failed at "+f+" for instance "+I2S(this)+". Invalid index at position: "+I2S(pos)+".")
         debug endif
 
-        return ( pos >= 0 and pos < length )
+        return pos >= 0 and pos < length
     endmethod
 
     private method assert_range takes integer pos, string f returns boolean
-        debug if ( pos < 0 or pos > length ) then
+        debug if pos < 0 or pos > length then
             debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"$NAME$::assert_range failed at "+f+" for instance "+I2S(this)+". Invalid iterator at position: "+I2S(pos)+".")
         debug endif
 
-        return ( pos >= 0 and pos <= length )
+        return pos >= 0 and pos <= length
     endmethod
 
     method operator [] takes integer index returns $TYPE$
