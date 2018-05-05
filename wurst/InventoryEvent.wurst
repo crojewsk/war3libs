@@ -15,8 +15,8 @@ int eventSlotTo = -1
 trigger eventMovedTrigger = CreateTrigger()
 trigger eventUsedTrigger = CreateTrigger()
 
-public constant EVENT_INVENTORY_MOVED = 0
-public constant EVENT_INVENTORY_USED = 1
+public constant EVENT_INVENTORY_MOVED = 1
+public constant EVENT_INVENTORY_USED = 2
 
 public function getInventoryManipulatingUnit() returns unit
     return eventUnit

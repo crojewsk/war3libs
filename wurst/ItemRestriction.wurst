@@ -13,22 +13,22 @@ import Orders
 
 HashMap<int, LinkedList<ItemRestriction>> restrictionsMap
 
-@configurable function getUnitTypeErrorMessage(int _unitId) returns string
+@configurable function getUnitTypeErrorMessage(UnitRequirement _requirement, int _unitId) returns string
     return "This item can not be hold by this unit type."
 
-@configurable function getLevelErrorMessage(int level) returns string
+@configurable function getLevelErrorMessage(UnitRequirement _requirement, int level) returns string
     return "This item requires level " + level.toString() + " to be picked up."
 
-@configurable function getStatisticErrorMessage(int value, string statistic) returns string
+@configurable function getStatisticErrorMessage(UnitRequirement _requirement, int value, string statistic) returns string
     return "This item requires " + value.toString() + " " + statistic + "."
 
-@configurable function getLimitErrorMessage(int limit) returns string
-    return "This unit can not hold more than " + limit.toString() + " item(s) of this item type."
+@configurable function getLimitErrorMessage(ItemRestriction restriction, int limit) returns string
+    return "This unit can not hold more than " + limit.toString() + " item(s) of " + restriction.name + "."
 
-@configurable function getExclusiveErrorMessage(string type1, string type2) returns string
-    return "This unit cannot hold items of type \"" + type1 + "\" and \"" + type2 + "\" at the same time."
+@configurable function getExclusiveErrorMessage(ItemRestriction first, ItemRestriction second) returns string
+    return "This unit cannot hold items of type \"" + first.name + "\" and \"" + second.name + "\" at the same time."
 
-@configurable function getForbiddenErrorMessage() returns string
+@configurable function getForbiddenErrorMessage(ItemRestriction _restriction) returns string
     return "This item can not be picked up by this unit."
 
 public interface UnitRequirementPredicate
@@ -48,15 +48,18 @@ public class UnitRequirement
     int intelligence
     /** Whether to include bonuses when checking unit statistics. */
     bool includeBonuses
+    /** Name associated with requirement. */
+    string name
     private LinkedList<UnitRequirementPredicate> conditions
 
-    construct(int lvl, int str, int agi, int intel, bool includeBonuses)
+    construct(string name, int lvl, int str, int agi, int intel, bool includeBonuses)
         typeIds = new LinkedList<int>()
         level = lvl
         strength = str
         agility = agi
         intelligence = intel
         this.includeBonuses = includeBonuses
+        this.name = name
         conditions = new LinkedList<UnitRequirementPredicate>()
     
     construct()
@@ -100,15 +103,15 @@ public class UnitRequirement
         string errorMessage
 
         if not typeIds.isEmpty() and not has(unitTypeId)
-            return getUnitTypeErrorMessage(unitTypeId)
+            return getUnitTypeErrorMessage(this, unitTypeId)
         if level > 0 and whichUnit.getLevel() < level
-            return getLevelErrorMessage(level)
+            return getLevelErrorMessage(this, level)
         if strength > 0 and whichUnit.getStr(includeBonuses) < strength
-            return getStatisticErrorMessage(strength, "Strength")
+            return getStatisticErrorMessage(this, strength, "Strength")
         if agility > 0 and whichUnit.getAgi(includeBonuses) < agility
-            return getStatisticErrorMessage(agility, "Agility")
+            return getStatisticErrorMessage(this, agility, "Agility")
         if intelligence > 0 and whichUnit.getInt(includeBonuses) < intelligence
-            return getStatisticErrorMessage(intelligence, "Intelligence")
+            return getStatisticErrorMessage(this, intelligence, "Intelligence")
 
         for condition in conditions
             errorMessage = condition.isMet(whichUnit)
@@ -135,24 +138,18 @@ public class ItemRestriction
     //  unit.index: current item count
     //  unit.-index: currently chosen exception from the exception list
     protected Table cache
-
     /** Item types that enforce this restriction. */
     LinkedList<int> typeIds
-
     /** Maximum number of items a unit can carry. */
     int limit
-
     /** Collection of UnitRequirement instances that may define different limits.
         Example: berserker may carry two 2H-weapons, rather than one. */
     LinkedList<LimitException> exceptions
-
     /** Collection of ItemRestriction instances that exclude each other from being picked.
         Example: a unit cannot carry both 1H-weapons and 2H-weapons at the same time. */
     LinkedList<ItemRestriction> exclusives
-
     /** Requirement a unit must meet to hold items. */
     UnitRequirement requirement
-
     /** Name associated with restriction. */
     string name
 
@@ -303,7 +300,7 @@ public class ItemRestriction
 
         for exclusive in exclusives
             if exclusive.getCount(whichUnit) > 0
-                return getExclusiveErrorMessage(name, exclusive.name)
+                return getExclusiveErrorMessage(this, exclusive)
 
         if not exceptions.isEmpty()
             exception = getException(whichUnit)
@@ -322,9 +319,9 @@ public class ItemRestriction
             threshold = exception.newLimit
 
         if threshold <= 0
-            return getForbiddenErrorMessage()
+            return getForbiddenErrorMessage(this)
         if getCount(whichUnit) >= threshold
-            return getLimitErrorMessage(threshold)
+            return getLimitErrorMessage(this, threshold)
         
         return null
     
@@ -355,7 +352,7 @@ function evaluateRestrictions(unit u, item itm) returns LinkedList<ItemRestricti
 
     return associated
 
-function onPickUp()
+function onPickup()
     let itm = GetManipulatedItem()
     int count
 
@@ -389,7 +386,7 @@ function onDrop()
         if count > 0
             restriction.setCount(u, count - 1)
 
-function onOrder()
+function onTargetOrder()
     let itm = GetOrderTargetItem()
     unit u
 
@@ -410,10 +407,10 @@ function onDeindex()
 init
     // For extra speed, each item type involved will have separate list assigned
     restrictionsMap = new HashMap<int, LinkedList<ItemRestriction>>()
-    // Global instance list for handling deindex events
+    // Global instance list for handling deindex event
     restrictionsMap.put(0, new LinkedList<ItemRestriction>())
     
-    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickUp())
+    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickup())
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DROP_ITEM, () -> onDrop())
-    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, () -> onOrder())
+    registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, () -> onTargetOrder())
     onUnitDeindex(() -> onDeindex())

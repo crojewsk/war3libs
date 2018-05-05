@@ -24,8 +24,8 @@ trigger eventAssemblingTrigger = CreateTrigger()
 trigger eventAssembledTrigger = CreateTrigger()
 boolean eventHandled = false
 
-public constant int EVENT_ITEM_RECIPE_ASSEMBLING = 0
-public constant int EVENT_ITEM_RECIPE_ASSEMBLED = 1
+public constant int EVENT_ITEM_RECIPE_ASSEMBLING = 1
+public constant int EVENT_ITEM_RECIPE_ASSEMBLED = 2
 
 /** Returns triggering item recipe. */
 public function getEventItemRecipe() returns ItemRecipe
@@ -243,11 +243,22 @@ public class ItemRecipe
 
     /** Removes all entries that match specified item type from recipe ingredient list. */
     function removeItem(int itemTypeId)
+        if batch // removing item when batch is ongoing is forbidden
+            return
+
         let iter = ingredients.iterator()
         boolean found = false
 
         while iter.hasNext()
             if iter.next().itemTypeId == itemTypeId
+                var entry = iter.current
+                var ingredient = entry.elem
+
+                // Decrement count only if this item is not part of any batch
+                if (entry.prev == iter.dummy or entry.prev.elem.index != ingredient.index) and
+                   (entry.next == iter.dummy or entry.next.elem.index != ingredient.index)
+                    count--
+
                 iter.remove()
                 found = true
                 break
