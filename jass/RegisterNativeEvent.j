@@ -26,7 +26,7 @@
 *       function IsNativeEventRegistered takes integer whichIndex, integer whichEvent returns boolean
 *          Whether index whichIndex has already been attached to event whichEvent.
 *
-*       function RegisterNativeEvent takes integer whichIndex, integer eventId returns boolean
+*       function RegisterNativeEventTrigger takes integer whichIndex, integer eventId returns boolean
 *          Registers whichIndex within whichEvent scope and assigns new trigger handle for it.
 *
 *       function GetIndexNativeEventTrigger takes integer whichIndex, integer whichEvent returns trigger
@@ -38,11 +38,11 @@
 *
 *    Custom events:
 *
-*       function CreateNativeEvent takes nothing returns integer
-*          Returns unique id for new event and registers it with RegisterNativeEvent.
-*
 *       function GetPlayerNativeEventTrigger takes player whichPlayer, integer whichEvent returns trigger
 *          Returns trigger handle assigned for event whichEvent specific to player whichPlayer.
+*
+*       function CreateNativeEvent takes nothing returns integer
+*          Returns unique id for new event and registers it with RegisterNativeEvent.
 *
 *       function RegisterAnyPlayerNativeEvent takes integer whichEvent, code func returns nothing
 *          Registers new event handler func for specified event whichEvent.
@@ -54,7 +54,7 @@
 library RegisterNativeEvent uses optional Table
 
 globals
-    private integer eventIndex = 500 // 0-499 reserved for native events
+    private integer eventIndex = 500 // 0-499 reserved for Blizzard native events
 endglobals
 
 private module NativeEventInit
@@ -82,7 +82,7 @@ else
 endif
 endfunction
 
-function RegisterNativeEvent takes integer whichIndex, integer whichEvent returns boolean
+function RegisterNativeEventTrigger takes integer whichIndex, integer whichEvent returns boolean
     if not IsNativeEventRegistered(whichIndex, whichEvent) then
 static if LIBRARY_Table then
         set NativeEvent.table[whichEvent].trigger[whichIndex] = CreateTrigger()
@@ -106,15 +106,15 @@ function GetNativeEventTrigger takes integer whichEvent returns trigger
     return GetIndexNativeEventTrigger(bj_MAX_PLAYER_SLOTS, whichEvent)
 endfunction
 
-function CreateNativeEvent takes nothing returns integer
-    local integer eventId = eventIndex
-    call RegisterNativeEvent(bj_MAX_PLAYER_SLOTS, eventId)
-    set eventIndex = eventIndex + 1
-    return eventId
-endfunction
-
 function GetPlayerNativeEventTrigger takes player whichPlayer, integer whichEvent returns trigger
     return GetIndexNativeEventTrigger(GetPlayerId(whichPlayer), whichEvent)
+endfunction
+
+function CreateNativeEvent takes nothing returns integer
+    local integer eventId = eventIndex
+    call RegisterNativeEventTrigger(bj_MAX_PLAYER_SLOTS, eventId)
+    set eventIndex = eventIndex + 1
+    return eventId
 endfunction
 
 function RegisterAnyPlayerNativeEvent takes integer whichEvent, code func returns nothing
@@ -122,7 +122,7 @@ function RegisterAnyPlayerNativeEvent takes integer whichEvent, code func return
 endfunction
 
 function RegisterPlayerNativeEvent takes player whichPlayer, integer whichEvent, code func returns nothing
-    call RegisterNativeEvent(GetPlayerId(whichPlayer), whichEvent)
+    call RegisterNativeEventTrigger(GetPlayerId(whichPlayer), whichEvent)
     call TriggerAddCondition(GetPlayerNativeEventTrigger(whichPlayer, whichEvent), Condition(func))
 endfunction
 

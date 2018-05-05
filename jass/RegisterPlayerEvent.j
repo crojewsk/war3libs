@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    RegisterPlayerEvent v1.0.1.1
+*    RegisterPlayerEvent v1.0.2.0
 *       by Bannar
 *
 *    Register version of TriggerRegisterPlayerEvent.
@@ -16,27 +16,35 @@
 *
 *    Functions:
 *
-*       function RegisterAnyPlayerEvent takes playerevent whichEvent, code cb returns nothing
-*          registers generic playerevent whichEvent adding code cb as callback
+*       function GetAnyPlayerEventTrigger takes playerevent whichEvent returns trigger
+*          Retrieves trigger handle for playerevent whichEvent.
 *
-*       function RegisterPlayerEvent takes player whichPlayer, playerevent whichEvent, code cb returns nothing
-*          registers playerevent whichEvent for player whichPlayer adding code cb as callback
+*       function GetPlayerEventTrigger takes player whichPlayer, playerevent whichEvent returns trigger
+*          Retrieves trigger handle for playerevent whichEvent specific to player whichPlayer.
 *
-*       function GetPlayerEventTrigger takes playerevent whichEvent returns trigger
-*          retrieves trigger handle for playerevent whichEvent
+*       function RegisterAnyPlayerEvent takes playerevent whichEvent, code func returns nothing
+*          Registers generic playerevent whichEvent adding code func as callback.
 *
-*       function GetPlayerEventTriggerForPlayer takes player whichPlayer, playerevent whichEvent returns trigger
-*          retrieves trigger handle for playerevent whichEvent specific to player whichPlayer
+*       function RegisterPlayerEvent takes player whichPlayer, playerevent whichEvent, code func returns nothing
+*          Registers playerevent whichEvent for player whichPlayer adding code func as callback.
 *
 *****************************************************************************/
 library RegisterPlayerEvent requires RegisterNativeEvent
 
-function RegisterAnyPlayerEvent takes playerevent whichEvent, code cb returns nothing
+function GetAnyPlayerEventTrigger takes playerevent whichEvent returns trigger
+    return GetNativeEventTrigger(GetHandleId(whichEvent))
+endfunction
+
+function GetPlayerEventTrigger takes player whichPlayer, playerevent whichEvent returns trigger
+    return GetPlayerNativeEventTrigger(whichPlayer, GetHandleId(whichEvent))
+endfunction
+
+function RegisterAnyPlayerEvent takes playerevent whichEvent, code func returns nothing
     local integer eventId = GetHandleId(whichEvent)
     local integer index = 0
     local trigger t = null
 
-    if RegisterNativeEvent(bj_MAX_PLAYER_SLOTS, eventId) then
+    if RegisterNativeEventTrigger(bj_MAX_PLAYER_SLOTS, eventId) then
         set t = GetNativeEventTrigger(eventId)
         loop
             call TriggerRegisterPlayerEvent(t, Player(index), whichEvent)
@@ -46,26 +54,18 @@ function RegisterAnyPlayerEvent takes playerevent whichEvent, code cb returns no
         set t = null
     endif
 
-    call TriggerAddCondition(GetNativeEventTrigger(eventId), Condition(cb))
+    call RegisterAnyPlayerNativeEvent(eventId, func)
 endfunction
 
-function RegisterPlayerEvent takes player whichPlayer, playerevent whichEvent, code cb returns nothing
+function RegisterPlayerEvent takes player whichPlayer, playerevent whichEvent, code func returns nothing
     local integer playerId = GetPlayerId(whichPlayer)
     local integer eventId = GetHandleId(whichEvent)
 
-    if RegisterNativeEvent(playerId, eventId) then
+    if RegisterNativeEventTrigger(playerId, eventId) then
         call TriggerRegisterPlayerEvent(GetIndexNativeEventTrigger(playerId, eventId), whichPlayer, whichEvent)
     endif
 
-    call TriggerAddCondition(GetIndexNativeEventTrigger(playerId, eventId), Condition(cb))
-endfunction
-
-function GetPlayerEventTrigger takes playerevent whichEvent returns trigger
-    return GetNativeEventTrigger(GetHandleId(whichEvent))
-endfunction
-
-function GetPlayerEventTriggerForPlayer takes player whichPlayer, playerevent whichEvent returns trigger
-    return GetIndexNativeEventTrigger(GetPlayerId(whichPlayer), GetHandleId(whichEvent))
+    call RegisterPlayerNativeEvent(whichPlayer, eventId, func)
 endfunction
 
 endlibrary

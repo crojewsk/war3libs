@@ -1,9 +1,11 @@
 /*****************************************************************************
 *
-*    RegisterPlayerUnitEvent v1.0.2.1
+*    RegisterPlayerUnitEvent v1.0.3.0
 *       by Bannar
 *
 *    Register version of TriggerRegisterPlayerUnitEvent.
+*
+*    Special thanks to Magtheridon96, Bribe, azlier and BBQ for the original library version.
 *
 ******************************************************************************
 *
@@ -14,38 +16,37 @@
 *
 ******************************************************************************
 *
-*    constant boolean RPUE_VERSION_NEW
-*       Defines API style. Choose between compatibility with standard RPUE or Blizzard alike interface
-*
-*
 *    Functions:
 *
-*       function Register(Any)PlayerUnitEvent takes playerunitevent whichEvent, code cb returns nothing
-*          registers generic playerunitevent whichEvent adding code cb as callback
+*       function GetAnyPlayerUnitEventTrigger takes playerunitevent whichEvent returns trigger
+*          Retrieves trigger handle for playerunitevent whichEvent.
 *
-*       function RegisterPlayerUnitEvent(ForPlayer) takes player whichPlayer, playerunitevent whichEvent, code cb returns nothing
-*          registers playerunitevent whichEvent for player whichPlayer adding code cb as callback
+*       function GetPlayerUnitEventTrigger takes player whichPlayer, playerunitevent whichEvent returns trigger
+*          Retrieves trigger handle for playerunitevent whichEvent specific to player whichPlayer.
 *
-*       function GetPlayerUnitEventTrigger takes playerunitevent whichEvent returns trigger
-*          retrieves trigger handle for playerunitevent whichEvent
+*       function RegisterAnyPlayerUnitEvent takes playerunitevent whichEvent, code func returns nothing
+*          Registers generic playerunitevent whichEvent adding code func as callback.
 *
-*       function GetPlayerUnitEventTriggerForPlayer takes player whichPlayer, playerunitevent whichEvent returns trigger
-*          retrieves trigger handle for playerunitevent whichEvent specific to player whichPlayer
+*       function RegisterPlayerUnitEvent takes player whichPlayer, playerunitevent whichEvent, code func returns nothing
+*          Registers playerunitevent whichEvent for player whichPlayer adding code func as callback.
 *
 *****************************************************************************/
 library RegisterPlayerUnitEvent requires RegisterNativeEvent
 
-globals
-    constant boolean RPUE_VERSION_NEW = false
-endglobals
+function GetAnyPlayerUnitEventTrigger takes playerunitevent whichEvent returns trigger
+    return GetNativeEventTrigger(GetHandleId(whichEvent))
+endfunction
 
-//! textmacro_once DEFINE_REGISTER_PLAYER_UNIT_EVENT takes GENERIC, SPECIFIC
-function Register$GENERIC$PlayerUnitEvent takes playerunitevent whichEvent, code cb returns nothing
+function GetPlayerUnitEventTrigger takes player whichPlayer, playerunitevent whichEvent returns trigger
+    return GetPlayerNativeEventTrigger(whichPlayer, GetHandleId(whichEvent))
+endfunction
+
+function RegisterAnyPlayerUnitEvent takes playerunitevent whichEvent, code func returns nothing
     local integer eventId = GetHandleId(whichEvent)
     local integer index = 0
     local trigger t = null
 
-    if RegisterNativeEvent(bj_MAX_PLAYER_SLOTS, eventId) then
+    if RegisterNativeEventTrigger(bj_MAX_PLAYER_SLOTS, eventId) then
         set t = GetNativeEventTrigger(eventId)
         loop
             call TriggerRegisterPlayerUnitEvent(t, Player(index), whichEvent, null)
@@ -55,33 +56,18 @@ function Register$GENERIC$PlayerUnitEvent takes playerunitevent whichEvent, code
         set t = null
     endif
 
-    call TriggerAddCondition(GetNativeEventTrigger(eventId), Condition(cb))
+    call RegisterAnyPlayerNativeEvent(eventId, func)
 endfunction
 
-function RegisterPlayerUnitEvent$SPECIFIC$ returns nothing
+function RegisterPlayerUnitEvent takes player whichPlayer, playerunitevent whichEvent, code func returns nothing
     local integer playerId = GetPlayerId(whichPlayer)
     local integer eventId = GetHandleId(whichEvent)
 
-    if RegisterNativeEvent(playerId, eventId) then
+    if RegisterNativeEventTrigger(playerId, eventId) then
         call TriggerRegisterPlayerUnitEvent(GetIndexNativeEventTrigger(playerId, eventId), whichPlayer, whichEvent, null)
     endif
 
-    call TriggerAddCondition(GetIndexNativeEventTrigger(playerId, eventId), Condition(cb))
-endfunction
-//! endtextmacro
-
-static if RPUE_VERSION_NEW then
-    //! runtextmacro DEFINE_REGISTER_PLAYER_UNIT_EVENT("Any", " takes player whichPlayer, playerunitevent whichEvent, code cb")
-else
-    //! runtextmacro DEFINE_REGISTER_PLAYER_UNIT_EVENT("", "ForPlayer takes playerunitevent whichEvent, code cb, player whichPlayer")
-endif
-
-function GetPlayerUnitEventTrigger takes playerunitevent whichEvent returns trigger
-    return GetNativeEventTrigger(GetHandleId(whichEvent))
-endfunction
-
-function GetPlayerUnitEventTriggerForPlayer takes player whichPlayer, playerunitevent whichEvent returns trigger
-    return GetIndexNativeEventTrigger(GetPlayerId(whichPlayer), GetHandleId(whichEvent))
+    call RegisterPlayerNativeEvent(whichPlayer, eventId, func)
 endfunction
 
 endlibrary
