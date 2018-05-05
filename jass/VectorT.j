@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    Vector<T> v1.1.7.0
+*    Vector<T> v1.1.8.0
 *       by Bannar
 *
 *    Dynamic contiguous array.
@@ -13,6 +13,7 @@
 *          hiveworkshop.com/forums/jass-resources-412/snippet-new-table-188084/
 *
 *       Alloc - choose whatever you like
+*          e.g.: by Sevion hiveworkshop.com/threads/snippet-alloc.192348/
 *
 ******************************************************************************
 *
@@ -26,6 +27,11 @@
 *            NAME - name of vector type
 *            TYPE - type of values stored
 *
+*     Implementation notes:
+*
+*       - DEFINE_STRUCT_VECTOR macro purpose is to provide natural typecasting syntax for struct types.
+*       - Vectors defined with DEFINE_STRUCT_VECTOR are inlined nicely into single create method and single integer array.
+*
 ******************************************************************************
 *
 *    struct API:
@@ -33,58 +39,61 @@
 *       General:
 *
 *        | static method create takes nothing returns thistype
-*        |    default ctor
+*        |    Default ctor.
 *        |
 *        | static method operator [] takes thistype vec returns thistype
-*        |    copy ctor
+*        |    Copy ctor.
 *        |
 *        | method destroy takes nothing returns nothing
-*        |    default dctor
+*        |    Default dctor.
 *        |
 *        | method empty takes nothing returns boolean
-*        |    checks whether the vector is empty
+*        |    Checks whether the vector is empty.
 *        |
 *        | method size takes nothing returns integer
-*        |    returns size of a vector
+*        |    Returns size of a vector.
 *
 *
 *       Access:
 *
 *        | method operator [] takes integer index returns $TYPE$
-*        |    returns item at position index
+*        |    Returns item at position index.
 *        |
 *        | method operator []= takes integer index, $TYPE$ value returns nothing
-*        |    sets item at index to value
+*        |    Sets item at index to value.
 *        |
 *        | method front takes nothing returns $TYPE$
-*        |    retrieves first element
+*        |    Retrieves first element.
 *        |
 *        | method back takes nothing returns $TYPE$
-*        |    retrieves last element
+*        |    Retrieves last element.
 *        |
 *        | method data takes nothing returns Table
-*        |    returns the underlying Table object
+*        |    Returns the underlying Table object.
 *
 *
 *       Modifiers:
 *
 *        | method clear takes nothing returns nothing
-*        |    performs a flush operation on data table
+*        |    Performs a flush operation on data table.
 *        |
 *        | method push takes $TYPE$ value returns thistype
-*        |    adds elements to the end
+*        |    Adds elements to the end.
 *        |
 *        | method pop takes nothing returns thistype
-*        |    removes the last element
+*        |    Removes the last element.
 *        |
 *        | method assign takes integer count, $TYPE$ value returns thistype
-*        |    assigns count elements replacing current data
+*        |    Assigns count elements replacing current data.
 *        |
 *        | method insert takes integer pos, integer count, $TYPE$ value returns thistype
-*        |    inserts count elements before position pos
+*        |    Inserts count elements before position pos.
 *        |
 *        | method erase takes integer pos, integer count returns thistype
-*        |    erase count elements starting at position pos
+*        |    Erases count elements starting at position pos.
+*        |
+*        | method resize takes integer count returns thistype
+*        |    Resizes the container to contain count elements.
 *
 *
 *****************************************************************************/
@@ -184,12 +193,12 @@ $ACCESS$ struct $NAME$ extends array
         return length
     endmethod
 
-    static method operator [] takes thistype vec returns thistype
+    static method operator [] takes thistype other returns thistype
         local thistype this = create()
 
         loop
-            exitwhen length >= vec.size()
-            call seT(length, vec[length])
+            exitwhen length >= other.size()
+            call seT(length, other[length])
             set length = length + 1
         endloop
 
@@ -229,7 +238,7 @@ $ACCESS$ struct $NAME$ extends array
     endmethod
 
     method pop takes nothing returns thistype
-        if ( length > 0 ) then
+        if length > 0 then
             set length = length - 1
             call table.$TYPE$.remove(length)
         endif
@@ -238,7 +247,7 @@ $ACCESS$ struct $NAME$ extends array
     endmethod
 
     method assign takes integer count, $TYPE$ value returns thistype
-        if ( count > 0 ) then
+        if count > 0 then
             call clear()
 
             loop
@@ -254,7 +263,7 @@ $ACCESS$ struct $NAME$ extends array
         local integer i
 
         if assert_range(pos, "insert") then
-            if ( count > 0 ) then
+            if count > 0 then
                 set length = length + count
 
                 set i = length - 1
@@ -278,7 +287,7 @@ $ACCESS$ struct $NAME$ extends array
 
     method erase takes integer pos, integer count returns thistype
         if assert_pos(pos, "erase") then
-            if ( count > 0 ) then
+            if count > 0 then
                 if ( pos + count > length ) then
                     set count = length - pos
                 endif
@@ -301,6 +310,23 @@ $ACCESS$ struct $NAME$ extends array
         return this
     endmethod
 
+    method resize takes integer count returns thistype
+        local $TYPE$ value
+        if count > length then
+            set value = get(-1)
+            loop
+                exitwhen length >= count
+                call push(value)
+            endloop
+        elseif count >= 0 then
+            loop
+                exitwhen length <= count
+                call pop()
+            endloop
+        endif
+
+        return this
+    endmethod
 endstruct
 
 //! endtextmacro

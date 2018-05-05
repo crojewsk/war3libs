@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    List<T> v2.1.1.1
+*    List<T> v2.1.2.0
 *       by Bannar
 *
 *    Doubly-linked list.
@@ -27,6 +27,12 @@
 *            NAME - name of list type
 *            TYPE - type of values stored
 *
+*     Implementation notes:
+*
+*       - DEFINE_STRUCT_LIST macro purpose is to provide natural typecasting syntax for struct types.
+*       - <NAME>Item structs inline directly into hashtable operations thus generate basically no code.
+*       - Lists defined with DEFINE_STRUCT_LIST are inlined nicely into single create method and single integer array.
+*
 ******************************************************************************
 *
 *    struct API:
@@ -41,19 +47,19 @@
 *       General:
 *
 *        | static method create takes nothing returns thistype
-*        |    default ctor
+*        |    Default ctor.
 *        |
 *        | static method operator [] takes thistype list returns thistype
-*        |    copy ctor
+*        |    Copy ctor.
 *        |
 *        | method destroy takes nothing returns nothing
-*        |    default dctor
+*        |    Default dctor.
 *        |
 *        | method empty takes nothing returns boolean
-*        |    checks whether the list is empty
+*        |    Checks whether the list is empty.
 *        |
 *        | method size takes nothing returns integer
-*        |    returns size of a list
+*        |    Returns size of a list.
 *
 *
 *       Access:
@@ -62,34 +68,37 @@
 *        | readonly <NAME>Item last
 *        |
 *        | method front takes nothing returns $TYPE$
-*        |    retrieves first element
+*        |    Retrieves first element.
 *        |
 *        | method back takes nothing returns $TYPE$
-*        |    retrieves last element
+*        |    Retrieves last element.
 *
 *
 *       Modifiers:
 *
 *        | method clear takes nothing returns nothing
-*        |    flushes list and recycles its nodes
+*        |    Flushes list and recycles its nodes.
 *        |
 *        | method push takes $TYPE$ value returns thistype
-*        |    adds elements to the end
+*        |    Adds elements to the end.
 *        |
 *        | method unshift takes $TYPE$ value returns thistype
-*        |    adds elements to the front
+*        |    Adds elements to the front.
 *        |
 *        | method pop takes nothing returns thistype
-*        |    removes the last element
+*        |    Removes the last element.
 *        |
 *        | method shift takes nothing returns thistype
-*        |    removes the first element
+*        |    Removes the first element.
 *        |
 *        | method find takes $TYPE$ value returns $NAME$Item
-*        |    returns the first node which data equals value
+*        |    Returns the first node which data equals value.
 *        |
 *        | method remove takes $NAME$Item node returns boolean
-*        |    removes node from the list, returns true on success
+*        |    Removes node from the list, returns true on success.
+*        |
+*        | method removeElem takes $TYPE$ value returns thistype
+*        |    Removes first element that equals value from the list.
 *
 *
 *****************************************************************************/
@@ -106,6 +115,7 @@ $ACCESS$ struct $NAME$Item extends array
     method operator data takes nothing returns $TYPE$
         return IntegerListItem(this).data
     endmethod
+
     method operator data= takes $TYPE$ value returns nothing
         set IntegerListItem(this).data = value
     endmethod
@@ -113,6 +123,7 @@ $ACCESS$ struct $NAME$Item extends array
     method operator next takes nothing returns thistype
         return IntegerListItem(this).next
     endmethod
+
     method operator next= takes thistype value returns nothing
         set IntegerListItem(this).next = value
     endmethod
@@ -120,6 +131,7 @@ $ACCESS$ struct $NAME$Item extends array
     method operator prev takes nothing returns thistype
         return IntegerListItem(this).prev
     endmethod
+
     method operator prev= takes thistype value returns nothing
         set IntegerListItem(this).prev = value
     endmethod
@@ -153,6 +165,7 @@ $ACCESS$ struct $NAME$Item extends array
     method operator data takes nothing returns $TYPE$
         return Table(this).$TYPE$[0] // hashtable[ node, 0 ] = data
     endmethod
+
     method operator data= takes $TYPE$ value returns nothing
         set Table(this).$TYPE$[0] = value
     endmethod
@@ -160,6 +173,7 @@ $ACCESS$ struct $NAME$Item extends array
     method operator next takes nothing returns thistype
         return Table(this)[1] // hashtable[ node, 1 ] = next
     endmethod
+
     method operator next= takes thistype value returns nothing
         set Table(this)[1] = value
     endmethod
@@ -167,6 +181,7 @@ $ACCESS$ struct $NAME$Item extends array
     method operator prev takes nothing returns thistype
         return Table(this)[-1] // hashtable[ node, -1 ] = prev
     endmethod
+
     method operator prev= takes thistype value returns nothing
         set Table(this)[-1] = value
     endmethod
@@ -179,10 +194,18 @@ $ACCESS$ struct $NAME$ extends array
 
     implement Alloc
 
+    private static method setNodeOwner takes $NAME$Item node, $NAME$ owner returns nothing
+        set Table(node)[2] = owner
+    endmethod
+
+    private static method getNodeOwner takes $NAME$Item node returns thistype
+        return Table(node)[2]
+    endmethod
+
     private method createNode takes $TYPE$ value returns $NAME$Item
         local $NAME$Item node = Table.create()
         set node.data = value
-        set Table(node)[2] = this // ownership
+        call setNodeOwner(node, this) // ownership
         return node
     endmethod
 
@@ -236,7 +259,7 @@ $ACCESS$ struct $NAME$ extends array
     method push takes $TYPE$ value returns thistype
         local $NAME$Item node = createNode(value)
 
-        if ( not empty() ) then
+        if not empty() then
             set last.next = node
             set node.prev = last
         else
@@ -253,16 +276,15 @@ $ACCESS$ struct $NAME$ extends array
     method unshift takes $TYPE$ value returns thistype
         local $NAME$Item node = createNode(value)
 
-        if ( not empty() ) then
+        if not empty() then
             set first.prev = node
             set node.next = first
-            set first = node
         else
-            set first = node
             set last = node
             set node.next = 0
         endif
 
+        set first = node
         set node.prev = 0
         set count = count + 1
         return this
@@ -271,11 +293,11 @@ $ACCESS$ struct $NAME$ extends array
     method pop takes nothing returns thistype
         local $NAME$Item node
 
-        if ( not empty() ) then
+        if not empty() then
             set node = last
             set last = last.prev
 
-            if ( last == 0 ) then
+            if last == 0 then
                 set first = 0
             else
                 set last.next = 0
@@ -292,11 +314,11 @@ $ACCESS$ struct $NAME$ extends array
     method shift takes nothing returns thistype
         local $NAME$Item node
 
-        if ( not empty() ) then
+        if not empty() then
             set node = first
             set first = first.next
 
-            if ( first == 0 ) then
+            if first == 0 then
                 set last = 0
             else
                 set first.prev = 0
@@ -310,9 +332,9 @@ $ACCESS$ struct $NAME$ extends array
         return this
     endmethod
 
-    static method operator[] takes thistype list returns thistype
+    static method operator [] takes thistype other returns thistype
         local thistype this = create()
-        local $NAME$Item node = list.first
+        local $NAME$Item node = other.first
 
         loop
             exitwhen node == 0
@@ -333,10 +355,10 @@ $ACCESS$ struct $NAME$ extends array
     endmethod
 
     method remove takes $NAME$Item node returns boolean
-        if ( Table(node)[2] == this ) then // match ownership
-            if ( node == first ) then
+        if getNodeOwner(node) == this then // match ownership
+            if node == first then
                 call shift()
-            elseif ( node == last ) then
+            elseif node == last then
                 call pop()
             else
                 set node.prev.next = node.next
@@ -351,6 +373,13 @@ $ACCESS$ struct $NAME$ extends array
         return false
     endmethod
 
+    method removeElem takes $TYPE$ value returns thistype
+        local $NAME$Item node = find(value)
+        if node != 0 then
+            call remove(node)
+        endif
+        return this
+    endmethod
 endstruct
 
 //! endtextmacro
