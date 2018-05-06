@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRestriction v1.1.0.0
+*    ItemRestriction v1.1.0.1
 *       by Bannar
 *
 *    For restricting or limiting items from being equipped.
@@ -181,7 +181,7 @@ library ItemRestriction requires /*
                         */ Alloc /*
                         */ ListT /*
                         */ RegisterPlayerUnitEvent /*
-                        */ SimError
+                        */ optional SimError
 
 private function GetUnitTypeErrorMessage takes UnitRequirement requirement, integer unitId returns string
     return "This item can not be hold by this unit type."
@@ -196,7 +196,7 @@ private function GetStatisticErrorMessage takes UnitRequirement requirement, int
 endfunction
 
 private function GetLimitErrorMessage takes ItemRestriction restriction, integer limit returns string
-    return "This unit can not hold more than " + I2S(limit) + " item(s) of " + restriction.name + "."
+    return "This unit can not hold more than " + I2S(limit) + " item(s) of \"" + restriction.name + "\" type."
 endfunction
 
 private constant function GetExclusiveErrorMessage takes ItemRestriction first, ItemRestriction second returns string
@@ -205,6 +205,14 @@ endfunction
 
 private constant function GetForbiddenErrorMessage takes ItemRestriction restriction returns string
     return "This item can not be picked up by this unit."
+endfunction
+
+private function PrintError takes player whichPlayer, string message returns nothing
+static if LIBRARY_SimError then
+    call SimError(whichPlayer, message)
+else
+    call DisplayTimedTextToPlayer(whichPlayer, 0, 0, 2.0, message)
+endif
 endfunction
 
 struct UnitRequirementPredicate extends array
@@ -510,7 +518,7 @@ struct ItemRestriction extends array
     method addException takes UnitRequirement requirement, integer newLimit returns thistype
         local LimitExceptionListItem iter = exceptions.first
         local LimitException exception
-        local LimitException entry
+        local LimitException entry = 0
 
         loop
             exitwhen iter == 0
@@ -566,7 +574,7 @@ struct ItemRestriction extends array
     endmethod
 
     method test takes unit whichUnit, item whichItem returns string
-        local LimitException exception = 0
+        local LimitException exception
         local integer threshold = limit
         local string errorMessage
         local IntegerListItem iter
@@ -595,7 +603,7 @@ struct ItemRestriction extends array
         if not exceptions.empty() then
             set exception = getException(whichUnit)
             if exception == 0 or exceptions.find(exception) == 0 then
-                call setException(whichUnit, 0)
+                call cache.remove(-GetUnitId(whichUnit)) // clear assigned exception if any
 
                 set iter = exceptions.first
                 loop
@@ -603,17 +611,16 @@ struct ItemRestriction extends array
                     set exception = iter.data
 
                     if exception.requirement.filter(whichUnit) then
+                        set threshold = exception.newLimit
                         call setException(whichUnit, exception)
                         exitwhen true
                     endif
 
                     set iter = iter.next
                 endloop
+            else
+                set threshold = exception.newLimit
             endif
-        endif
-
-        if exception != 0 then
-            set threshold = exception.newLimit
         endif
 
         if threshold <= 0 then
@@ -650,7 +657,7 @@ struct ItemRestriction extends array
             set errorMessage = restriction.test(u, itm)
 
             if errorMessage != null then      
-                call SimError(GetOwningPlayer(u), errorMessage)
+                call PrintError(GetOwningPlayer(u), errorMessage)
                 call associated.destroy()
                 return 0
             endif

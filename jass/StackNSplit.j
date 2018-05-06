@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.0.0
+*    StackNSplit v1.1.0.1
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -539,8 +539,10 @@ private function OnMoved takes nothing returns nothing
 
         if charges <= 0 then
             set proceed = false
-        elseif swappedTypeId == itemTypeId and swappedCharges <= 0 then
-            set proceed = false
+        elseif swappedTypeId == itemTypeId then
+            if swappedCharges <= 0 then
+                set proceed = false
+            endif
         elseif swappedTypeId != GetItemContainer(itemTypeId) then
             set proceed = false
         endif

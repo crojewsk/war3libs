@@ -347,8 +347,9 @@ function onMoved()
 
         if charges <= 0
             proceed = false
-        else if swappedTypeId == itemTypeId and swappedCharges <= 0
-            proceed = false
+        else if swappedTypeId == itemTypeId
+            if swappedCharges <= 0
+                proceed = false
         else if swappedTypeId != getItemContainer(itemTypeId)
             proceed = false
 

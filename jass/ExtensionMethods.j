@@ -18,7 +18,6 @@
 *          Retrieves slot number of specified item equiped by unit whichUnit or -1 if not found.
 *
 *****************************************************************************/
-
 library ExtensionMethods
 
 function GetUnitItemCount takes unit whichUnit returns integer

@@ -23,7 +23,7 @@ HashMap<int, LinkedList<ItemRestriction>> restrictionsMap
     return "This item requires " + value.toString() + " " + statistic + "."
 
 @configurable function getLimitErrorMessage(ItemRestriction restriction, int limit) returns string
-    return "This unit can not hold more than " + limit.toString() + " item(s) of " + restriction.name + "."
+    return "This unit can not hold more than " + limit.toString() + " item(s) of \"" + restriction.name + "\" type."
 
 @configurable function getExclusiveErrorMessage(ItemRestriction first, ItemRestriction second) returns string
     return "This unit cannot hold items of type \"" + first.name + "\" and \"" + second.name + "\" at the same time."
@@ -305,18 +305,18 @@ public class ItemRestriction
         if not exceptions.isEmpty()
             exception = getException(whichUnit)
             if exception == null or not exceptions.contains(exception)
-                setException(whichUnit, null)
+                cache.removeInt(-whichUnit.getIndex()) // clear assigned exception if any
 
                 var iter = exceptions.iterator()
                 while iter.hasNext()
-                    if iter.next().requirement.filter(whichUnit)
-                        exception = iter.current.elem
+                    exception = iter.next()
+                    if exception.requirement.filter(whichUnit)
+                        threshold = exception.newLimit
                         setException(whichUnit, exception)
                         break
                 iter.close()
-        
-        if exception != null
-            threshold = exception.newLimit
+            else
+                threshold = exception.newLimit
 
         if threshold <= 0
             return getForbiddenErrorMessage(this)
@@ -345,7 +345,7 @@ function evaluateRestrictions(unit u, item itm) returns LinkedList<ItemRestricti
         errorMessage = restriction.test(u, itm)
 
         if errorMessage != null
-            print(errorMessage)
+            printTimedToPlayer(errorMessage, 2, u.getOwner())
             destroy associated
             return null
         associated.push(restriction)
