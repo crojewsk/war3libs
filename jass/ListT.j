@@ -94,7 +94,7 @@
 *        | method find takes $TYPE$ value returns $NAME$Item
 *        |    Returns the first node which data equals value.
 *        |
-*        | method remove takes $NAME$Item node returns boolean
+*        | method erase takes $NAME$Item node returns boolean
 *        |    Removes node from the list, returns true on success.
 *        |
 *        | method removeElem takes $TYPE$ value returns thistype
@@ -354,7 +354,7 @@ $ACCESS$ struct $NAME$ extends array
         return node
     endmethod
 
-    method remove takes $NAME$Item node returns boolean
+    method erase takes $NAME$Item node returns boolean
         if getNodeOwner(node) == this then // match ownership
             if node == first then
                 call shift()
@@ -368,9 +368,14 @@ $ACCESS$ struct $NAME$ extends array
             endif
             return true
         debug else
-            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"$NAME$::remove failed for instance "+I2S(this)+". Attempted to remove invalid node "+I2S(node)+".")
+            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"$NAME$::erase failed for instance "+I2S(this)+". Attempted to remove invalid node "+I2S(node)+".")
         endif
         return false
+    endmethod
+
+    method remove takes $NAME$Item node returns boolean
+        debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Method $NAME$::remove is obsolete, use $NAME$::erase instead.")
+        return erase(node)
     endmethod
 
     method removeElem takes $TYPE$ value returns thistype
