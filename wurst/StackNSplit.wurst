@@ -1,5 +1,5 @@
 /*
-*  StackNSplit v1.0.0.0
+*  StackNSplit v1.1.1.0
 *     by Bannar
 *
 *  Easy item charges stacking and splitting.
@@ -8,6 +8,7 @@ package StackNSplit
 import RegisterEvents
 import InventoryEvent
 import SmoothItemPickup
+import LinkedList
 
 hashtable table = InitHashtable()
 
@@ -95,11 +96,11 @@ public function getItemSplitCount(int elementType) returns int
 public function itemHasContainer(int elementType) returns boolean
     return table.hasBoolean(2, elementType)
 
-/** Returns item type assigned to specified element as its container. */
-public function getItemContainer(int elementType) returns int
+/** Returns list of item types assigned to specified element as its containers. */
+public function getItemContainers(int elementType) returns LinkedList<int>
     if itemHasContainer(elementType)
-        return table.loadInt(2, elementType)
-    return 0
+        return table.loadInt(2, elementType) castTo LinkedList<int>
+    return null
 
 /** Unregisters specified item from being stackable. */
 public function makeItemUnstackable(int elementType)
@@ -120,15 +121,21 @@ public function makeItemStackable(int elementType, int stacks, int splits) retur
     return false
 
 /** Unsets any container related data related to specified element item type. */
-public function unsetItemContainer(int elementType)
-    int containerType = getItemContainer(elementType)
+public function unsetItemContainer(int containerType)
+    int elementType = getItemContainerItem(containerType)
 
-    if containerType != 0
+    if elementType != 0
         table.removeInt(0, containerType)
         table.removeInt(1, containerType)
-        table.removeInt(2, elementType)
         table.removeInt(3, containerType)
         table.removeBoolean(4, containerType)
+
+        // remove containerType from containers list
+        let containers = getItemContainers(elementType)
+        containers.remove(containerType)
+        if containers.isEmpty()
+            destroy containers
+            table.removeInt(2, elementType)
 
 /** Sets specified containerType item type as container for item type elementType.
     If emptiable flags is set to true, container charges can be dropped down to 0
@@ -138,17 +145,23 @@ public function setItemContainer(int elementType, int containerType, int stacks,
         return false
     else if stacks <= 0 or elementType == containerType
         return false
-    else if isItemContainer(elementType) or isItemStackable(containerType)
+    else if isItemContainer(elementType) or isItemContainer(containerType)
+        return false
+    else if isItemStackable(containerType)
         return false
 
     int value = splits
     if value < 1
         value = 1
 
-    unsetItemContainer(elementType)
+    var containers = getItemContainers(elementType)
+    if containers == null
+        containers = new LinkedList<int>()
+        table.saveInt(2, elementType, containers castTo int)
+    containers.push(containerType)
+
     table.saveInt(0, containerType, stacks)
     table.saveInt(1, containerType, value)
-    table.saveInt(2, elementType, containerType)
     table.saveInt(3, containerType, elementType)
     table.saveBoolean(4, containerType, emptiable)
     return true
@@ -165,14 +178,14 @@ public function unit.isItemFullyStacked(int itemTypeId) returns boolean
 
     int size = this.inventorySize()
     if itemHasContainer(itemTypeId)
-        int containerType = getItemContainer(itemTypeId)
-        int max = getItemContainerMaxStacks(containerType)
-        if max > 0
-            for slot = 0 to size - 1
-                itm = this.itemInSlot(slot)
-                if itm.getTypeId() == itemTypeId and GetItemCharges(itm) < max
-                    result = false
-                    break
+        for containerType in getItemContainers(itemTypeId)
+            int max = getItemContainerMaxStacks(containerType)
+            if max > 0
+                for slot = 0 to size - 1
+                    itm = this.itemInSlot(slot)
+                    if itm.getTypeId() == itemTypeId and GetItemCharges(itm) < max
+                        result = false
+                        break
 
     if result and isItemStackable(itemTypeId)
         int max = getItemMaxStacks(itemTypeId)
@@ -239,9 +252,11 @@ public function unit.stackItem(item whichItem) returns boolean
         stackItem(this, whichItem, whichItem, getItemContainerItem(itemTypeId), max)
         return true
     else if itemHasContainer(itemTypeId)
-        int containerType = getItemContainer(itemTypeId)
-        max = getItemContainerMaxStacks(containerType)
-        charges = stackItem(this, whichItem, whichItem, containerType, max)
+        for containerType in getItemContainers(itemTypeId)
+            max = getItemContainerMaxStacks(containerType)
+            charges = stackItem(this, whichItem, whichItem, containerType, max)
+            if charges == 0
+                break
         result = true
 
     if isItemStackable(itemTypeId) and charges > 0
@@ -282,9 +297,11 @@ public function unit.splitItem(item whichItem) returns boolean
 
     // Redistribute splitted stacks if possible
     if itemHasContainer(elementType)
-        int containerType = getItemContainer(elementType)
-        max = getItemContainerMaxStacks(containerType)
-        toSplit = stackItem(this, with, whichItem, containerType, max)
+        for containerType in getItemContainers(elementType)
+            max = getItemContainerMaxStacks(containerType)
+            toSplit = stackItem(this, with, whichItem, containerType, max)
+            if toSplit == 0
+                break
     if isItemStackable(elementType) and toSplit > 0
         max = getItemMaxStacks(elementType)
         toSplit = stackItem(this, with, whichItem, elementType, max)
@@ -334,31 +351,23 @@ function onMoved()
     unit u = getInventoryManipulatingUnit()
     item itm = getInventoryManipulatedItem()
     int itemTypeId = itm.getTypeId()
-    int max
+    int max = 0
 
     if getInventorySlotFrom() == getInventorySlotTo() // splitting
         u.splitItem(itm)
     else if not isItemContainer(itemTypeId)
-        boolean proceed = true
         int charges = itm.getCharges()
         item swapped = getInventorySwappedItem()
         int swappedTypeId = swapped.getTypeId()
         int swappedCharges = swapped.getCharges()
 
-        if charges <= 0
-            proceed = false
-        else if swappedTypeId == itemTypeId
-            if swappedCharges <= 0
-                proceed = false
-        else if swappedTypeId != getItemContainer(itemTypeId)
-            proceed = false
-
-        if proceed
-            if swappedTypeId == getItemContainer(itemTypeId)
-                max = getItemContainerMaxStacks(swappedTypeId)
-            else
+        if charges > 0
+            if swappedTypeId == itemTypeId and swappedCharges > 0
                 max = getItemMaxStacks(itemTypeId)
+            else if getItemContainerItem(swappedTypeId) == itemTypeId
+                max = getItemContainerMaxStacks(swappedTypeId)
 
+        if max > 0
             int total = charges + swappedCharges
             if total > max
                 if swappedCharges < max // if not met, allow for standard replacement action

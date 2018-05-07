@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.0.0
+*    SmoothItemPickup v1.0.1.3
 *       by Bannar
 *
 *    Allows for item pickup during certain conditions even when unit inventory is full.

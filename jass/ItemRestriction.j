@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRestriction v1.1.0.1
+*    ItemRestriction v1.1.0.8
 *       by Bannar
 *
 *    For restricting or limiting items from being equipped.

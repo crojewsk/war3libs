@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.0.1
+*    StackNSplit v1.1.1.0
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -60,9 +60,10 @@
 *       Containers cannot have thier own containers assigned.
 *       Containers may declare different maximum stack and split count values.
 *       Container is always prioritized over element type when item charges are being redistributed.
+*       Each element can have multiple item types assigned as its containers.
 *
 ******************************************************************************
-*       
+*
 *    Functions:
 *
 *       function IsItemContainer takes integer containerType returns boolean
@@ -92,8 +93,8 @@
 *       function ItemHasContainer takes integer elementType returns boolean
 *          Indicates if specifed element type has container assigned to it.
 *
-*       function GetItemContainer takes integer elementType returns integer
-*          Returns item type assigned to specified element as its container.
+*       function GetItemContainers takes integer elementType returns IntegerList
+*          Returns list of item types assigned to specified element as its containers.
 *
 *       function MakeItemUnstackable takes integer elementType returns nothing
 *          Unregisters specified item from being stackable.
@@ -120,7 +121,7 @@
 *
 *****************************************************************************/
 library StackNSplit requires /*
-                    */ Table /*
+                    */ ListT /*
                     */ InventoryEvent /*
                     */ RegisterPlayerUnitEvent /*
                     */ ExtensionMethods /*
@@ -204,7 +205,7 @@ function ItemHasContainer takes integer elementType returns boolean
     return table[2].has(elementType)
 endfunction
 
-function GetItemContainer takes integer elementType returns integer
+function GetItemContainers takes integer elementType returns IntegerList
     if ItemHasContainer(elementType) then
         return table[2][elementType]
     endif
@@ -232,34 +233,52 @@ function MakeItemStackable takes integer elementType, integer stacks, integer sp
     return false
 endfunction
 
-function UnsetItemContainer takes integer elementType returns nothing
-    local integer containerType = GetItemContainer(elementType)
+function UnsetItemContainer takes integer containerType returns nothing
+    local integer elementType = GetItemContainerItem(containerType)
+    local IntegerList containers
 
-    if containerType != 0 then
+    if elementType != 0 then
         call table[0].remove(containerType)
         call table[1].remove(containerType)
-        call table[2].remove(elementType)
         call table[3].remove(containerType)
         call table[4].boolean.remove(containerType)
+
+        // remove containerType from containers list
+        set containers = GetItemContainers(elementType)
+        call containers.removeElem(containerType)
+        if containers.empty() then
+            call containers.destroy()
+            call table[2].remove(elementType)
+        endif
     endif
 endfunction
 
 function SetItemContainer takes integer elementType, integer containerType, integer stacks, integer splits, boolean emptiable returns boolean
+    local IntegerList containers
+
     if elementType == 0 or containerType == 0 then
         return false
     elseif stacks <= 0 or elementType == containerType then
         return false
-    elseif IsItemContainer(elementType) or IsItemStackable(containerType) then
+    elseif IsItemContainer(elementType) or IsItemContainer(containerType) then
+        return false
+    elseif IsItemStackable(containerType) then
         return false
     endif
 
     if splits < 1 then
         set splits = 1
     endif
-    call UnsetItemContainer(elementType)
+
+    set containers = GetItemContainers(elementType)
+    if containers == 0 then
+        set containers = IntegerList.create()
+        set table[2][elementType] = containers
+    endif
+    call containers.push(containerType)
+
     set table[0][containerType] = stacks
     set table[1][containerType] = splits
-    set table[2][elementType] = containerType
     set table[3][containerType] = elementType
     set table[4].boolean[containerType] = emptiable
     return true
@@ -271,8 +290,7 @@ function IsUnitItemFullyStacked takes unit whichUnit, integer itemTypeId returns
     local item itm
     local integer size
     local integer slot = 0
-    local integer containerType
-    local integer itmType
+    local IntegerListItem iter
 
     if not IsUnitInventoryFull(whichUnit) then
         return false
@@ -282,19 +300,23 @@ function IsUnitItemFullyStacked takes unit whichUnit, integer itemTypeId returns
 
     set size = UnitInventorySize(whichUnit)
     if ItemHasContainer(itemTypeId) then
-        set containerType = GetItemContainer(itemTypeId)
-        set max = GetItemContainerMaxStacks(containerType)
-        if max > 0 then
-            loop
-                exitwhen slot >= size
-                set itm = UnitItemInSlot(whichUnit, slot)
-                if GetItemTypeId(itm) == itemTypeId and GetItemCharges(itm) < max then
-                    set result = false
-                    exitwhen true
-                endif
-                set slot = slot + 1
-            endloop
-        endif
+        set iter = GetItemContainers(itemTypeId).first
+        loop
+            exitwhen iter == 0
+            set max = GetItemContainerMaxStacks(iter.data)
+            if max > 0 then
+                loop
+                    exitwhen slot >= size
+                    set itm = UnitItemInSlot(whichUnit, slot)
+                    if GetItemTypeId(itm) == itemTypeId and GetItemCharges(itm) < max then
+                        set result = false
+                        exitwhen true
+                    endif
+                    set slot = slot + 1
+                endloop
+            endif
+            set iter = iter.next
+        endloop
     endif
 
     if result and IsItemStackable(itemTypeId) then
@@ -383,6 +405,7 @@ function UnitStackItem takes unit whichUnit, item whichItem returns boolean
     local integer containerType
     local integer max
     local boolean result = false
+    local IntegerListItem iter
 
     if whichUnit == null or charges == 0 then
         return result
@@ -393,9 +416,16 @@ function UnitStackItem takes unit whichUnit, item whichItem returns boolean
         call StackItem(whichUnit, whichItem, whichItem, GetItemContainerItem(itemTypeId), max)
         return true
     elseif ItemHasContainer(itemTypeId) then
-        set containerType = GetItemContainer(itemTypeId)
-        set max = GetItemContainerMaxStacks(containerType)
-        set charges = StackItem(whichUnit, whichItem, whichItem, containerType, max)
+        set iter = GetItemContainers(itemTypeId).first
+        loop
+            exitwhen iter == 0
+            set containerType = iter.data
+
+            set max = GetItemContainerMaxStacks(containerType)
+            set charges = StackItem(whichUnit, whichItem, whichItem, containerType, max)
+            exitwhen charges == 0
+            set iter = iter.next
+        endloop
         set result = true
     endif
 
@@ -413,6 +443,7 @@ function UnitSplitItem takes unit whichUnit, item whichItem returns boolean
     local integer max
     local integer toSplit
     local integer elementType
+    local IntegerListItem iter
     local integer containerType
     local item with
     local trigger t
@@ -445,9 +476,16 @@ function UnitSplitItem takes unit whichUnit, item whichItem returns boolean
 
     // Redistribute splitted stacks if possible
     if ItemHasContainer(elementType) then
-        set containerType = GetItemContainer(elementType)
-        set max = GetItemContainerMaxStacks(containerType)
-        set toSplit = StackItem(whichUnit, with, whichItem, containerType, max)
+        set iter = GetItemContainers(elementType).first
+        loop
+            exitwhen iter == 0
+            set containerType = iter.data
+
+            set max = GetItemContainerMaxStacks(containerType)
+            set toSplit = StackItem(whichUnit, with, whichItem, containerType, max)
+            exitwhen toSplit == 0
+            set iter = iter.next
+        endloop
     endif
     if IsItemStackable(elementType) and toSplit > 0 then
         set max = GetItemMaxStacks(elementType)
@@ -524,10 +562,9 @@ private function OnMoved takes nothing returns nothing
     local item swapped
     local integer swappedTypeId
     local integer swappedCharges
-    local integer max
+    local integer max = 0
     local integer total
     local integer diff
-    local boolean proceed = true
 
     if GetEventInventorySlotFrom() == GetEventInventorySlotTo() then // splitting
         call UnitSplitItem(u, itm)
@@ -537,23 +574,15 @@ private function OnMoved takes nothing returns nothing
         set swappedTypeId = GetItemTypeId(swapped)
         set swappedCharges = GetItemCharges(swapped)
 
-        if charges <= 0 then
-            set proceed = false
-        elseif swappedTypeId == itemTypeId then
-            if swappedCharges <= 0 then
-                set proceed = false
+        if charges > 0 then
+            if swappedTypeId == itemTypeId and swappedCharges > 0 then
+                set max = GetItemMaxStacks(itemTypeId)
+            elseif GetItemContainerItem(swappedTypeId) == itemTypeId then
+                set max = GetItemContainerMaxStacks(swappedTypeId)
             endif
-        elseif swappedTypeId != GetItemContainer(itemTypeId) then
-            set proceed = false
         endif
 
-        if proceed then
-            if swappedTypeId == GetItemContainer(itemTypeId) then
-                set max = GetItemContainerMaxStacks(swappedTypeId)
-            else
-                set max = GetItemMaxStacks(itemTypeId)
-            endif
-
+        if max > 0 then
             set total = charges + swappedCharges
             if total > max then
                 if swappedCharges < max then // if not met, allow for standard replacement action
