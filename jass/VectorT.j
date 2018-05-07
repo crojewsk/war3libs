@@ -23,7 +23,7 @@
 *
 *       macro DEFINE_VECTOR takes ACCESS, NAME, TYPE
 *
-*          ACCESS - encapsulation, choose retriction access
+*          ACCESS - encapsulation, choose restriction access
 *            NAME - name of vector type
 *            TYPE - type of values stored
 *
@@ -41,7 +41,7 @@
 *        | static method create takes nothing returns thistype
 *        |    Default ctor.
 *        |
-*        | static method operator [] takes thistype vec returns thistype
+*        | static method operator [] takes thistype other returns thistype
 *        |    Copy ctor.
 *        |
 *        | method destroy takes nothing returns nothing
