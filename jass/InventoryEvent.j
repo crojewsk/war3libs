@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    InventoryEvent v1.0.1.1
+*    InventoryEvent v1.0.1.2
 *       by Bannar
 *
 *    For intuitive inventory event handling.
@@ -77,10 +77,12 @@ function GetEventInventorySwapped takes nothing returns item
 endfunction
 
 function GetInventoryEventTrigger takes integer whichEvent returns trigger
+    debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Function GetInventoryEventTrigger is obsolete, use GetNativeEventTrigger instead.")
     return GetNativeEventTrigger(whichEvent)
 endfunction
 
 function RegisterInventoryEvent takes code func, integer whichEvent returns nothing
+    debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Function RegisterInventoryEvent is obsolete, use RegisterNativeEvent instead.")
     call RegisterNativeEvent(whichEvent, func)
 endfunction
 
