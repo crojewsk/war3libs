@@ -1,9 +1,9 @@
 /*****************************************************************************
 *
-*    ItemRestriction v1.1.0.0
+*    ItemRecipe v1.1.0.1
 *       by Bannar
 *
-*    For restricting or limiting items from being equipped.
+*    Powerful item recipe creator.
 *
 ******************************************************************************
 *
@@ -229,7 +229,7 @@ private function FireEvent takes integer evt, ItemRecipe recipe, unit u, item it
     set eventIngredients = ingredients
 
     call TriggerEvaluate(GetNativeEventTrigger(evt))
-    call TriggerEvaluate(GetPlayerNativeEventTrigger(GetOwningPlayer(u), evt))
+    call TriggerEvaluate(GetIndexNativeEventTrigger(GetPlayerId(GetOwningPlayer(u)), evt))
 
     set eventRecipe = prevRecipe
     set eventUnit = prevUnit
@@ -290,11 +290,11 @@ private module ItemRecipeInit
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function OnPickup)
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_EFFECT, function OnCast)
 static if LIBRARY_InventoryEvent then
-        call RegisterAnyPlayerNativeEvent(InventoryEvent.MOVED, function OnMoved)
+        call RegisterNativeEvent(InventoryEvent.MOVED, function OnMoved)
 endif
 static if LIBRARY_SmoothItemPickup then
         // Allow for smooth pickup for pickup-type unordered recipes
-        call RegisterAnyPlayerNativeEvent(EVENT_ITEM_SMOOTH_PICKUP, function OnSmoothPickup)
+        call RegisterNativeEvent(EVENT_ITEM_SMOOTH_PICKUP, function OnSmoothPickup)
         call AddSmoothItemPickupCondition(RecipeSmoothPickupPredicate.create())
 endif
     endmethod

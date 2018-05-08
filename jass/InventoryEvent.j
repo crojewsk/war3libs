@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    InventoryEvent v1.0.1.0
+*    InventoryEvent v1.0.1.1
 *       by Bannar
 *
 *    For intuitive inventory event handling.
@@ -81,7 +81,7 @@ function GetInventoryEventTrigger takes integer whichEvent returns trigger
 endfunction
 
 function RegisterInventoryEvent takes code func, integer whichEvent returns nothing
-    call RegisterAnyPlayerNativeEvent(whichEvent, func)
+    call RegisterNativeEvent(whichEvent, func)
 endfunction
 
 private function FireEvent takes integer evt, unit u, item itm, integer slotFrom, integer slotTo returns nothing
@@ -96,7 +96,7 @@ private function FireEvent takes integer evt, unit u, item itm, integer slotFrom
     set eventSlotTo = slotTo
 
     call TriggerEvaluate(GetNativeEventTrigger(evt))
-    call TriggerEvaluate(GetPlayerNativeEventTrigger(GetOwningPlayer(u), evt))
+    call TriggerEvaluate(GetIndexNativeEventTrigger(GetPlayerId(GetOwningPlayer(u)), evt))
 
     set eventUnit = prevUnit
     set eventItem = prevItem

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.1.3
+*    SmoothItemPickup v1.0.1.4
 *       by Bannar
 *
 *    Allows for item pickup during certain conditions even when unit inventory is full.
@@ -148,7 +148,7 @@ private function FireEvent takes unit u, item itm returns nothing
     set eventItem = itm
 
     call TriggerEvaluate(GetNativeEventTrigger(EVENT_ITEM_SMOOTH_PICKUP))
-    call TriggerEvaluate(GetPlayerNativeEventTrigger(GetOwningPlayer(u), EVENT_ITEM_SMOOTH_PICKUP))
+    call TriggerEvaluate(GetIndexNativeEventTrigger(GetPlayerId(GetOwningPlayer(u)), EVENT_ITEM_SMOOTH_PICKUP))
 
     set eventUnit = prevUnit
     set eventItem = prevItem

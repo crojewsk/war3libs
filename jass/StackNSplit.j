@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.1.0
+*    StackNSplit v1.1.1.1
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -349,7 +349,7 @@ private function FireEvent takes integer evt, unit u, item itm, integer charges 
     set eventCharges = charges
 
     call TriggerEvaluate(GetNativeEventTrigger(evt))
-    call TriggerEvaluate(GetPlayerNativeEventTrigger(GetOwningPlayer(u), evt))
+    call TriggerEvaluate(GetIndexNativeEventTrigger(GetPlayerId(GetOwningPlayer(u)), evt))
 
     set eventUnit = prevUnit
     set eventItem = prevItem
@@ -635,9 +635,9 @@ private module InitModule
         set table = TableArray[5]
 
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function OnPickup)
-        call RegisterAnyPlayerNativeEvent(InventoryEvent.MOVED, function OnMoved)
+        call RegisterNativeEvent(InventoryEvent.MOVED, function OnMoved)
 static if LIBRARY_SmoothItemPickup then
-        call RegisterAnyPlayerNativeEvent(EVENT_ITEM_SMOOTH_PICKUP, function OnSmoothPickup)
+        call RegisterNativeEvent(EVENT_ITEM_SMOOTH_PICKUP, function OnSmoothPickup)
         call AddSmoothItemPickupCondition(StackSmoothPickupPredicate.create())
 endif
     endmethod
