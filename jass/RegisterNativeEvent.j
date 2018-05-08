@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    RegisterNativeEvent v1.1.1.0
+*    RegisterNativeEvent v1.1.1.1
 *       by Bannar
 *
 *    Storage of trigger handles for native events.
@@ -38,17 +38,14 @@
 *
 *    Custom events:
 *
-*       function GetPlayerNativeEventTrigger takes player whichPlayer, integer whichEvent returns trigger
-*          Returns trigger handle assigned for event whichEvent specific to player whichPlayer.
-*
 *       function CreateNativeEvent takes nothing returns integer
 *          Returns unique id for new event and registers it with RegisterNativeEvent.
 *
-*       function RegisterAnyPlayerNativeEvent takes integer whichEvent, code func returns nothing
-*          Registers new event handler func for specified event whichEvent.
+*       function RegisterIndexNativeEvent takes integer whichIndex, integer whichEvent, code func returns nothing
+*          Registers new event handler func for event whichEvent specific to index whichIndex.
 *
-*       function RegisterPlayerNativeEvent takes player whichPlayer, integer whichEvent, code func returns nothing
-*          Registers new event handler func for event whichEvent specific to player whichPlayer.
+*       function RegisterNativeEvent takes integer whichEvent, code func returns nothing
+*          Registers new event handler func for specified event whichEvent.
 *
 *****************************************************************************/
 library RegisterNativeEvent uses optional Table
@@ -106,10 +103,6 @@ function GetNativeEventTrigger takes integer whichEvent returns trigger
     return GetIndexNativeEventTrigger(bj_MAX_PLAYER_SLOTS, whichEvent)
 endfunction
 
-function GetPlayerNativeEventTrigger takes player whichPlayer, integer whichEvent returns trigger
-    return GetIndexNativeEventTrigger(GetPlayerId(whichPlayer), whichEvent)
-endfunction
-
 function CreateNativeEvent takes nothing returns integer
     local integer eventId = eventIndex
     call RegisterNativeEventTrigger(bj_MAX_PLAYER_SLOTS, eventId)
@@ -117,13 +110,13 @@ function CreateNativeEvent takes nothing returns integer
     return eventId
 endfunction
 
-function RegisterAnyPlayerNativeEvent takes integer whichEvent, code func returns nothing
-    call TriggerAddCondition(GetNativeEventTrigger(whichEvent), Condition(func))
+function RegisterIndexNativeEvent takes integer whichIndex, integer whichEvent, code func returns nothing
+    call RegisterNativeEventTrigger(whichIndex, whichEvent)
+    call TriggerAddCondition(GetIndexNativeEventTrigger(whichIndex, whichEvent), Condition(func))
 endfunction
 
-function RegisterPlayerNativeEvent takes player whichPlayer, integer whichEvent, code func returns nothing
-    call RegisterNativeEventTrigger(GetPlayerId(whichPlayer), whichEvent)
-    call TriggerAddCondition(GetPlayerNativeEventTrigger(whichPlayer, whichEvent), Condition(func))
+function RegisterNativeEvent takes integer whichEvent, code func returns nothing
+    call RegisterIndexNativeEvent(bj_MAX_PLAYER_SLOTS, whichEvent, func)
 endfunction
 
 endlibrary

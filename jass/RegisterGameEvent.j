@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    RegisterGameEvent v1.0.0.4
+*    RegisterGameEvent v1.0.0.5
 *       by Bannar
 *
 *    Register version of TriggerRegisterGameEvent.
@@ -36,7 +36,7 @@ function RegisterGameEvent takes gameevent whichEvent, code func returns nothing
         call TriggerRegisterGameEvent(GetNativeEventTrigger(eventId), whichEvent)
     endif
 
-    call RegisterAnyPlayerNativeEvent(eventId, func)
+    call RegisterNativeEvent(eventId, func)
 endfunction
 
 endlibrary

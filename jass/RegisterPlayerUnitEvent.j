@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    RegisterPlayerUnitEvent v1.0.3.0
+*    RegisterPlayerUnitEvent v1.0.3.1
 *       by Bannar
 *
 *    Register version of TriggerRegisterPlayerUnitEvent.
@@ -38,7 +38,7 @@ function GetAnyPlayerUnitEventTrigger takes playerunitevent whichEvent returns t
 endfunction
 
 function GetPlayerUnitEventTrigger takes player whichPlayer, playerunitevent whichEvent returns trigger
-    return GetPlayerNativeEventTrigger(whichPlayer, GetHandleId(whichEvent))
+    return GetIndexNativeEventTrigger(GetPlayerId(whichPlayer), GetHandleId(whichEvent))
 endfunction
 
 function RegisterAnyPlayerUnitEvent takes playerunitevent whichEvent, code func returns nothing
@@ -56,7 +56,7 @@ function RegisterAnyPlayerUnitEvent takes playerunitevent whichEvent, code func 
         set t = null
     endif
 
-    call RegisterAnyPlayerNativeEvent(eventId, func)
+    call RegisterNativeEvent(eventId, func)
 endfunction
 
 function RegisterPlayerUnitEvent takes player whichPlayer, playerunitevent whichEvent, code func returns nothing
@@ -67,7 +67,7 @@ function RegisterPlayerUnitEvent takes player whichPlayer, playerunitevent which
         call TriggerRegisterPlayerUnitEvent(GetIndexNativeEventTrigger(playerId, eventId), whichPlayer, whichEvent, null)
     endif
 
-    call RegisterPlayerNativeEvent(whichPlayer, eventId, func)
+    call RegisterIndexNativeEvent(playerId, eventId, func)
 endfunction
 
 endlibrary

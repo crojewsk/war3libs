@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    RegisterUnitEvent v1.0.1.0
+*    RegisterUnitEvent v1.0.1.1
 *       by Bannar
 *
 *    Register version of TriggerRegisterUnitEvent.
@@ -37,7 +37,7 @@ function RegisterUnitEvent takes unit whichUnit, unitevent whichEvent, code func
         call TriggerRegisterUnitEvent(GetIndexNativeEventTrigger(unitId, eventId), whichUnit, whichEvent)
     endif
 
-    call TriggerAddCondition(GetIndexNativeEventTrigger(unitId, eventId), Condition(func))
+    call RegisterIndexNativeEvent(unitId, eventId, func)
 endfunction
 
 endlibrary
