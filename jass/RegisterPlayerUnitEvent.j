@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    RegisterPlayerUnitEvent v1.0.3.1
+*    RegisterPlayerUnitEvent v1.0.3.2
 *       by Bannar
 *
 *    Register version of TriggerRegisterPlayerUnitEvent.
@@ -12,7 +12,7 @@
 *    Requirements:
 *
 *       RegisterNativeEvent by Bannar
-*          hiveworkshop.com/forums/submissions-414/snippet-registerevent-pack-250266/
+*          hiveworkshop.com/threads/snippet-registerevent-pack.250266/
 *
 ******************************************************************************
 *

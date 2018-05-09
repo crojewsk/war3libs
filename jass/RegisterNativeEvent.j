@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    RegisterNativeEvent v1.1.1.1
+*    RegisterNativeEvent v1.1.1.2
 *       by Bannar
 *
 *    Storage of trigger handles for native events.
@@ -73,7 +73,7 @@ endstruct
 
 function IsNativeEventRegistered takes integer whichIndex, integer whichEvent returns boolean
 static if LIBRARY_Table then
-    return NativeEvent.table[whichEvent].has(whichIndex)
+    return NativeEvent.table[whichEvent].trigger.has(whichIndex)
 else
     return HaveSavedHandle(NativeEvent.table, whichEvent, whichIndex)
 endif
