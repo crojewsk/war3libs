@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.1.3
+*    StackNSplit v1.1.1.4
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -630,7 +630,7 @@ private struct StackSmoothPickupPredicate extends array
 endstruct
 endif
 
-private module InitModule
+private module StackNSplitInit
     private static method onInit takes nothing returns nothing
         set EVENT_ITEM_CHARGES_ADDED = CreateNativeEvent()
         set EVENT_ITEM_CHARGES_REMOVED = CreateNativeEvent()
@@ -646,8 +646,8 @@ endif
     endmethod
 endmodule
 
-private struct Init extends array
-    implement InitModule
+private struct StackNSplit extends array
+    implement StackNSplitInit
 endstruct
 
 endlibrary
