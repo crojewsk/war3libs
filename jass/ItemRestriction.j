@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRestriction v1.1.0.8
+*    ItemRestriction v1.1.0.9
 *       by Bannar
 *
 *    For restricting or limiting items from being equipped.
@@ -16,7 +16,10 @@
 *          hiveworkshop.com/threads/containers-list-t.249011/
 *
 *       RegisterPlayerUnitEvent by Bannar
-*          hiveworkshop.com/forums/jass-resources-412/snippet-new-table-188084/
+*          hiveworkshop.com/threads/snippet-registerevent-pack.250266/
+*
+*
+*    Optional requirement:
 *
 *       SimError by Vexorian
 *          wc3c.net/showthread.php?t=101260&highlight=SimError

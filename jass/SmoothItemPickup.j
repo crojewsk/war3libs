@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.1.5
+*    SmoothItemPickup v1.0.1.6
 *       by Bannar
 *
 *    Allows for item pickup during certain conditions even when unit inventory is full.
@@ -9,17 +9,11 @@
 *
 *    Requirements:
 *
-*       Table by Bribe
-*          hiveworkshop.com/forums/jass-resources-412/snippet-new-table-188084/
-*
-*       InventoryEvent by Bannar
-*          hiveworkshop.com/threads/snippet-inventoryevent.287084/
+*       Alloc - choose whatever you like
+*          e.g.: by Sevion hiveworkshop.com/threads/snippet-alloc.192348/
 *
 *       RegisterPlayerUnitEvent by Bannar
 *          hiveworkshop.com/threads/snippet-registerevent-pack.250266/
-*
-*       SmoothItemPickup by Bannar
-*          hiveworkshop.com/forums/jass-resources-412/...
 *
 ******************************************************************************
 *

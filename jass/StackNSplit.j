@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.1.2
+*    StackNSplit v1.1.1.3
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -12,14 +12,17 @@
 *
 *    Requirements:
 *
-*       Table by Bribe
-*          hiveworkshop.com/forums/jass-resources-412/snippet-new-table-188084/
+*       ListT by Bannar
+*          hiveworkshop.com/threads/containers-list-t.249011/
 *
 *       InventoryEvent by Bannar
 *          hiveworkshop.com/threads/snippet-inventoryevent.287084/
 *
 *       RegisterPlayerUnitEvent by Bannar
 *          hiveworkshop.com/threads/snippet-registerevent-pack.250266/
+*
+*
+*    Optional requirement:
 *
 *       SmoothItemPickup by Bannar
 *          hiveworkshop.com/forums/jass-resources-412/...

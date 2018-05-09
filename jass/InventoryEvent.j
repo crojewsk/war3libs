@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    InventoryEvent v1.0.1.3
+*    InventoryEvent v1.0.1.4
 *       by Bannar
 *
 *    For intuitive inventory event handling.
@@ -10,7 +10,7 @@
 *    Requirements:
 *
 *       RegisterPlayerUnitEvent by Bannar
-*          hiveworkshop.com/forums/submissions-414/snippet-registerevent-pack-250266/
+*          hiveworkshop.com/threads/snippet-registerevent-pack.250266/
 *
 ******************************************************************************
 *
