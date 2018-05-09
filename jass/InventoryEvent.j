@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    InventoryEvent v1.0.1.2
+*    InventoryEvent v1.0.1.3
 *       by Bannar
 *
 *    For intuitive inventory event handling.
@@ -19,11 +19,9 @@
 *       integer InventoryEvent.MOVED
 *       integer InventoryEvent.USED
 *
-*       Use RegisterPlayerNativeEvent or RegisterAnyPlayerNativeEvent for event registration.
-*       GetNativeEventTrigger and GetPlayerNativeEventTrigger provide access to trigger handles.
+*       Use RegisterNativeEvent or RegisterIndexNativeEvent for event registration.
+*       GetNativeEventTrigger and GetIndexNativeEventTrigger provide access to trigger handles.
 *
-*
-*    Functions:
 *
 *       function GetEventInventoryUnit takes nothing returns unit
 *          Returns unit which manipulated event item.
@@ -39,12 +37,6 @@
 *
 *       function GetEventInventorySwapped takes nothing returns item
 *          Returns item which was swapped with manipulated item on MOVED event if any.
-*
-*       function GetInventoryEventTrigger takes integer whichEvent returns trigger
-*          Retrieves trigger handle for event with id whichEvent.
-*
-*       function RegisterInventoryEvent takes code func, integer whichEvent returns nothing
-*          Registers new event handler func for inventory event whichEvent.
 *
 *****************************************************************************/
 library InventoryEvent requires RegisterPlayerUnitEvent, ExtensionMethods

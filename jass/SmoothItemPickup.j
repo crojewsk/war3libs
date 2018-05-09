@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.1.4
+*    SmoothItemPickup v1.0.1.5
 *       by Bannar
 *
 *    Allows for item pickup during certain conditions even when unit inventory is full.
@@ -27,8 +27,8 @@
 *
 *       integer EVENT_ITEM_SMOOTH_PICKUP
 *
-*       Use RegisterPlayerNativeEvent or RegisterAnyPlayerNativeEvent for event registration.
-*       GetNativeEventTrigger and GetPlayerNativeEventTrigger provide access to trigger handles.
+*       Use RegisterNativeEvent or RegisterIndexNativeEvent for event registration.
+*       GetNativeEventTrigger and GetIndexNativeEventTrigger provide access to trigger handles.
 *
 *
 *       function GetSmoothItemPickupUnit takes nothing returns unit

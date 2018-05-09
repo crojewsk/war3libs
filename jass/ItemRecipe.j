@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.0.1
+*    ItemRecipe v1.1.0.2
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -28,7 +28,9 @@
 *       integer EVENT_ITEM_RECIPE_ASSEMBLING
 *       integer EVENT_ITEM_RECIPE_ASSEMBLED
 *
-*    Functions:
+*       Use RegisterNativeEvent or RegisterIndexNativeEvent for event registration.
+*       GetNativeEventTrigger and GetIndexNativeEventTrigger provide access to trigger handles.
+*
 *
 *       function GetEventItemRecipe takes nothing returns ItemRecipe
 *          Returns triggering item recipe.

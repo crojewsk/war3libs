@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.1.1
+*    StackNSplit v1.1.1.2
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -31,8 +31,8 @@
 *       integer EVENT_ITEM_CHARGES_ADDED
 *       integer EVENT_ITEM_CHARGES_REMOVED
 *
-*       Use RegisterPlayerNativeEvent or RegisterAnyPlayerNativeEvent for event registration.
-*       GetNativeEventTrigger and GetPlayerNativeEventTrigger provide access to trigger handles.
+*       Use RegisterNativeEvent or RegisterIndexNativeEvent for event registration.
+*       GetNativeEventTrigger and GetIndexNativeEventTrigger provide access to trigger handles.
 *
 *
 *       function GetItemStackingUnit takes nothing returns unit
