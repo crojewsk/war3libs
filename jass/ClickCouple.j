@@ -1,92 +1,64 @@
 /*****************************************************************************
 *
-*    ClickCouple v1.3.4.0
-*       by Bannar aka Spinnaker
-*          Credits to Azlier for original project
+*    ClickCouple v1.4.0.0
+*       by Bannar
 *
 *    Detects unit double click event.
 *
+*    Credits to Azlier for original project. Thanks to Magtheridon96, Bribe and
+*    all other hivers for helping me greatly during the development of this snippet.
+*
 ******************************************************************************
+*
+*    Requirements:
+*
+*       RegisterPlayerUnitEvent by Bannar
+*          hiveworkshop.com/threads/snippet-registerevent-pack.250266/
 *
 *    Optional requirements:
 *
-*       RegisterPlayerUnitEvent library - supports:
-*
-*        | RegisterPlayerUnitEvent by Bannar
-*        |    hiveworkshop.com/forums/submissions-414/snippet-registerevent-pack-250266/
-*        |
-*        | RegisterPlayerUnitEvent by Magtheridon96
-*        |    hiveworkshop.com/forums/jass-resources-412/snippet-registerplayerunitevent-203338/
+*       Table by Bribe
+*          hiveworkshop.com/threads/snippet-new-table.188084/
 *
 ******************************************************************************
 *
 *    Configurables:
 *
 *       constant real PERIOD
-*          maximum delay between separate clicks to fire double click event
-*
-*       constant boolean UNIT_INDEXER
-*          if unit indexer is present, GetEventClickedUnitId will be implemented
+*          Maximum delay between separate clicks to fire double click event.
 *
 ******************************************************************************
 *
-*    Functions:
+*    Event API:
+*
+*       integer EVENT_PLAYER_DOUBLE_CLICK
+*
+*       Use RegisterNativeEvent or RegisterIndexNativeEvent for event registration.
+*       GetNativeEventTrigger and GetIndexNativeEventTrigger provide access to trigger handles.
+*
 *
 *       function GetEventClickingPlayer takes nothing returns player
-*          retrieves player who performed double click event
+*          Retrieves player who performed double click event.
 *
 *       function GetEventClickingPlayerId takes nothing returns integer
-*          returns index of event player
+*          Returns index of event player.
 *
 *       function GetEventClickedUnit takes nothing returns unit
-*          retrieves unit which has been double clicked
-*
-*       function GetEventClickedUnitId takes nothing returns integer
-*          returns index of event unit; exists only if UNIT_INDEXER equals true
-*
-*       function RegisterDoubleClickEvent takes player p, code c returns nothing
-*          registers double click event for player p
-*
-*       function RegisterAnyDoubleClickEvent takes code c returns nothing
-*          registers any double click event, no matter the circumstances
-*
-*       function TriggerRegisterDoubleClickEvent takes trigger t, player p returns nothing
-*          trigger version of RegisterDoubleClickEvent function
-*
-*       function TriggerRegisterAnyDoubleClickEvent takes trigger t returns nothing
-*          trigger version of RegisterAnyDoubleClickEvent function
-*
-*       function GetDoubleClickEventTrigger takes integer playerId returns trigger
-*          returns event trigger corresponding to given player's id; use 16 to retrieve generic one
-*
-******************************************************************************
-*
-*    Module ClickCoupleStruct:
-*
-*       Expects:    method onDoubleClick takes nothing returns nothing
-*       Optional:   method filterPlayer takes nothing returns nothing
-*
-*       static method operator clicker takes nothing returns player
-*          returns event player
-*
-*       static method operator clicked takes nothing returns unit
-*          returns event unit
+*          Retrieves unit which has been double clicked.
 *
 *****************************************************************************/
-library ClickCouple requires optional RegisterPlayerUnitEvent
+library ClickCouple requires RegisterPlayerUnitEvent optional Table
 
 globals
-    private constant real    PERIOD          = 0.30
-    private constant boolean UNIT_INDEXER    = false
+    private constant real PERIOD  = 0.30
+
+    integer EVENT_PLAYER_DOUBLE_CLICK
 endglobals
 
 globals
     private timer clock = CreateTimer()
     private player eventPlayer = null
     private unit eventUnit = null
-
-    private trigger array triggers
-    private real caller = -1
 endglobals
 
 function GetEventClickingPlayer takes nothing returns player
@@ -101,111 +73,37 @@ function GetEventClickedUnit takes nothing returns unit
     return eventUnit
 endfunction
 
-static if UNIT_INDEXER then
-	function GetEventClickedUnitId takes nothing returns integer
-		return GetUnitId(eventUnit)
-	endfunction
-endif
-
-private module ClickCoupleInit
-    static method onInit takes nothing returns nothing
-        static if LIBRARY_RegisterPlayerUnitEvent then
-            static if RPUE_COMPATIBILITY then
-                call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_SELECTED, function thistype.onClick)
-            else
-                call RegisterPlayerUnitEvent(EVENT_PLAYER_UNIT_SELECTED, function thistype.onClick)
-            endif
-        else
-            local trigger t = CreateTrigger()
-            call TriggerRegisterAnyUnitEventBJ(t, EVENT_PLAYER_UNIT_SELECTED)
-            call TriggerAddCondition(t, function thistype.onClick)
-            set t = null
-        endif
-
-        call TimerStart(clock, 604800, false, null)
-    endmethod
-endmodule
-
-private struct ClickCouple extends array
-    unit unit
-    real interval
-
-    static method trigger takes integer id returns trigger
-        if ( triggers[id] == null ) then
-            set triggers[id] = CreateTrigger()
-        endif
-        return triggers[id]
-    endmethod
-
-    static method onClick takes nothing returns boolean
-        local player prevPlayer
-        local unit prevUnit
-        local thistype this = GetPlayerId(GetTriggerPlayer())
-
-        if ( GetTriggerUnit() == unit ) and ( interval + PERIOD > TimerGetElapsed(clock) ) then
-            set prevPlayer = eventPlayer
-            set prevUnit = eventUnit
-
-            set eventPlayer = GetTriggerPlayer()
-            set eventUnit = GetTriggerUnit()
-
-            set caller = 16
-            set caller = this
-            call TriggerEvaluate(triggers[16])
-            call TriggerEvaluate(triggers[this])
-            set caller = -1
-
-            set eventPlayer = prevPlayer
-            set eventUnit = prevUnit
-            set prevPlayer = null
-            set prevUnit = null
-
-            set unit = null
-            set interval = 0
-        else
-            set unit = GetTriggerUnit()
-            set interval = TimerGetElapsed(clock)
-        endif
-
-        return false
-    endmethod
-
-    implement ClickCoupleInit
-endstruct
-
-function RegisterDoubleClickEvent takes player p, code c returns nothing
-    call TriggerAddCondition(ClickCouple.trigger(GetPlayerId(p)), Condition(c))
+function RegisterDoubleClickEvent takes player whichPlayer, code func returns nothing
+    debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Function RegisterDoubleClickEvent is obsolete, use RegisterIndexNativeEvent instead.")
+    call RegisterIndexNativeEvent(GetPlayerId(whichPlayer), EVENT_PLAYER_DOUBLE_CLICK, func)
 endfunction
 
-function RegisterAnyDoubleClickEvent takes code c returns nothing
-    call TriggerAddCondition(ClickCouple.trigger(16), Condition(c))
-endfunction
-
-function TriggerRegisterDoubleClickEvent takes trigger t, player p returns nothing
-    call TriggerRegisterVariableEvent(t, SCOPE_PRIVATE + "caller", EQUAL, GetPlayerId(p))
-endfunction
-
-function TriggerRegisterAnyDoubleClickEvent takes trigger t returns nothing
-    call TriggerRegisterVariableEvent(t, SCOPE_PRIVATE + "caller", EQUAL, 16)
+function RegisterAnyDoubleClickEvent takes code func returns nothing
+    debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Function RegisterAnyDoubleClickEvent is obsolete, use RegisterNativeEvent instead.")
+    call RegisterNativeEvent(EVENT_PLAYER_DOUBLE_CLICK, func)
 endfunction
 
 function GetDoubleClickEventTrigger takes integer playerId returns trigger
-    return ClickCouple.trigger(playerId) // playerId of 16 will return generic trigger
+    debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Function GetDoubleClickEventTrigger is obsolete, use GetIndexNativeEventTrigger instead.")
+    return GetIndexNativeEventTrigger(playerId, EVENT_PLAYER_DOUBLE_CLICK)
 endfunction
 
 module ClickCoupleStruct
     static method operator clicker takes nothing returns player
+        debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Method ClickCoupleStruct::clicker is obsolete, use GetEventClickingPlayer instead.")
         return GetEventClickingPlayer()
     endmethod
 
     static method operator clicked takes nothing returns unit
+        debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Method ClickCoupleStruct::clicked is obsolete, use GetEventClickedUnit instead.")
         return GetEventClickedUnit()
     endmethod
 
     static if thistype.onDoubleClick.exists then
         private static method onDoubleClickEvent takes nothing returns nothing
+            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Module ClickCoupleStruct is obsolete, use RegisterNativeEvent directly instead.")
             static if thistype.filterPlayer.exists then
-                if ( filterPlayer(clicker) ) then
+                if filterPlayer(GetEventClickingPlayer()) then
                     call thistype(GetEventClickingPlayerId()).onDoubleClick()
                 endif
             else
@@ -214,9 +112,80 @@ module ClickCoupleStruct
         endmethod
 
         private static method onInit takes nothing returns nothing
-            call RegisterAnyDoubleClickEvent(function thistype.onDoubleClickEvent)
+            call RegisterNativeEvent(EVENT_PLAYER_DOUBLE_CLICK, function thistype.onDoubleClickEvent)
         endmethod
     endif
 endmodule
+
+private function FireEvent takes player p, unit u returns nothing
+    local player prevPlayer = eventPlayer
+    local unit prevUnit = eventUnit
+    local integer playerId = GetPlayerId(p)
+
+    set eventPlayer = p
+    set eventUnit = u
+
+    call TriggerEvaluate(GetNativeEventTrigger(EVENT_PLAYER_DOUBLE_CLICK))
+    if IsNativeEventRegistered(playerId, EVENT_PLAYER_DOUBLE_CLICK) then
+        call TriggerEvaluate(GetIndexNativeEventTrigger(playerId, EVENT_PLAYER_DOUBLE_CLICK))
+    endif
+
+    set eventPlayer = prevPlayer
+    set eventUnit = prevUnit
+    set prevPlayer = null
+    set prevUnit = null
+endfunction
+
+private module ClickCoupleInit
+static if LIBRARY_Table then
+    static TableArray table
+else
+    static hashtable table = InitHashtable()
+endif
+
+    static method onInit takes nothing returns nothing
+        set EVENT_PLAYER_DOUBLE_CLICK = CreateNativeEvent()
+
+static if LIBRARY_Table then
+        set table = TableArray[bj_MAX_PLAYER_SLOTS]
+endif
+        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_SELECTED, function thistype.onClick)
+        call TimerStart(clock, 604800, false, null)
+    endmethod
+endmodule
+
+private struct ClickCouple extends array
+    static method onClick takes nothing returns nothing
+        local player p = GetTriggerPlayer()
+        local unit u = GetTriggerUnit()
+        local integer id = GetPlayerId(p)
+        local integer unitId = GetHandleId(u)
+
+static if LIBRARY_Table then
+        if table[id].unit.has(unitId) and table[id].unit[unitId] == u and /*
+        */ (table[id].real[unitId] + PERIOD) > TimerGetElapsed(clock) then
+            call FireEvent(p, u)
+            call table[id].flush()
+        else
+            set table[id].unit[unitId] = u
+            set table[id].real[unitId] = TimerGetElapsed(clock)
+        endif
+else
+        if HaveSavedHandle(table, id, unitId) and LoadUnitHandle(table, id, unitId) == u and /*
+        */ (LoadReal(table, id, unitId) + PERIOD) > TimerGetElapsed(clock) then
+            call FireEvent(p, u)
+            call FlushChildHashtable(table, id)
+        else
+            call SaveUnitHandle(table, id, unitId, u)
+            call SaveReal(table, id, unitId, TimerGetElapsed(clock))
+        endif
+endif
+
+        set p = null
+        set u = null
+    endmethod
+
+    implement ClickCoupleInit
+endstruct
 
 endlibrary
