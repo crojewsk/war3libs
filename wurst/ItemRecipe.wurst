@@ -304,7 +304,7 @@ public class ItemRecipe
 
     private function orderedSearch(LinkedList<item> items) returns HashMap<int, RecipeIngredient>
         int slot = 0
-        boolean found = false
+        boolean found
         item itm
         int charges
         RecipeIngredient ingredient
@@ -312,7 +312,8 @@ public class ItemRecipe
         let resultIngredients = new HashMap<int, RecipeIngredient>()
 
         let iter = ingredients.iterator()..next()
-        while iter.current != iter.dummy // Match() validated count > size already
+        while iter.current != iter.dummy // test() validated count > size already
+            found = false
             itm = items.get(slot)
             charges = itm.getCharges()
             ingredient = iter.current.elem
@@ -410,7 +411,10 @@ public class ItemRecipe
 
         for slot = 0 to size - 1
             items.push(whichUnit.itemInSlot(slot))
-        return test(whichUnit, items)
+
+        HashMap<int, RecipeIngredient> result = test(whichUnit, items)
+        destroy items
+        return result
 
     /** Attempts to assembly recipe for specified unit given the ingredients list. */
     function assembly(unit whichUnit, LinkedList<item> fromItems) returns boolean
@@ -428,6 +432,7 @@ public class ItemRecipe
         fireEvent(eventAssemblingTrigger, this, whichUnit, null, resultIngredients)
         if eventHandled
             eventHandled = prevHandled
+            destroy resultIngredients
             return false
 
         for i = 0 to size - 1
@@ -450,6 +455,8 @@ public class ItemRecipe
 
         eventHandled = prevHandled
         fireEvent(eventAssembledTrigger, this, whichUnit, itm, resultIngredients)
+
+        destroy resultIngredients
         return true
 
     /** Attempts to assembly recipe for specified unit. */
@@ -459,7 +466,10 @@ public class ItemRecipe
 
         for slot = 0 to size - 1
             items.push(whichUnit.itemInSlot(slot))
-        return assembly(whichUnit, items)
+
+        boolean result = assembly(whichUnit, items)
+        destroy items
+        return result
 
     /** Reverts the assembly, removing the reward item and returning all ingredients to specified unit. */
     function disassembly(unit whichUnit) returns boolean
@@ -509,7 +519,9 @@ public function unit.disassemblyItem(item whichItem) returns boolean
 
     return recipes.getFirst().disassembly(this)
 
-function onInventoryChange(unit u, item itm)
+function onPickup()
+    unit u = GetTriggerUnit()
+    item itm = GetManipulatedItem()
     int itemTypeId = itm.getTypeId()
     let recipes = ItemRecipe.getRecipesForIngredient(itemTypeId)
 
@@ -518,11 +530,24 @@ function onInventoryChange(unit u, item itm)
             if recipe.pickupable and recipe.assembly(u)
                 break
 
-function onPickup()
-    onInventoryChange(GetTriggerUnit(), GetManipulatedItem())
-
 function onMoved()
-    onInventoryChange(getInventoryManipulatingUnit(), getInventoryManipulatedItem())
+    unit u = getInventoryManipulatingUnit()
+    item itm = getInventoryManipulatedItem()
+    int itemTypeId = itm.getTypeId()
+    let recipes = ItemRecipe.getRecipesForIngredient(itemTypeId)
+    int size = u.inventorySize()
+
+    if recipes != null
+        let items = new LinkedList<item>()
+        for slot = 0 to size - 1
+            items.push(u.itemInSlot(slot))
+        items.set(getInventorySlotFrom(), getInventorySwappedItem())
+        items.set(getInventorySlotTo(), itm)
+
+        for recipe in recipes
+            if recipe.pickupable and recipe.assembly(u, items)
+                break
+        destroy items
 
 function onCast()
     unit u = GetTriggerUnit()
