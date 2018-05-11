@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ClickCouple v1.4.0.0
+*    ClickCouple v1.4.0.1
 *       by Bannar
 *
 *    Detects unit double click event.
@@ -143,7 +143,7 @@ else
     static hashtable table = InitHashtable()
 endif
 
-    static method onInit takes nothing returns nothing
+    private static method onInit takes nothing returns nothing
         set EVENT_PLAYER_DOUBLE_CLICK = CreateNativeEvent()
 
 static if LIBRARY_Table then
