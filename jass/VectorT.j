@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    Vector<T> v1.1.8.0
+*    Vector<T> v1.1.8.1
 *       by Bannar
 *
 *    Dynamic contiguous array.
@@ -10,7 +10,7 @@
 *    Requirements:
 *
 *       Table by Bribe
-*          hiveworkshop.com/forums/jass-resources-412/snippet-new-table-188084/
+*          hiveworkshop.com/threads/snippet-new-table.188084/
 *
 *       Alloc - choose whatever you like
 *          e.g.: by Sevion hiveworkshop.com/threads/snippet-alloc.192348/
@@ -145,8 +145,8 @@ $ACCESS$ struct $NAME$ extends array
     endmethod
 
     private method assert_pos takes integer pos, string f returns boolean
-        debug if pos < 0 and pos >= length then
-            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"$NAME$::assert_pos failed at "+f+" for instance "+I2S(this)+". Invalid index at position: "+I2S(pos)+".")
+        debug if pos < 0 or pos >= length then
+            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"$NAME$::assert_pos failed at "+f+" for instance "+I2S(this)+". Index "+I2S(pos)+" is out of range.")
         debug endif
 
         return pos >= 0 and pos < length
@@ -154,7 +154,7 @@ $ACCESS$ struct $NAME$ extends array
 
     private method assert_range takes integer pos, string f returns boolean
         debug if pos < 0 or pos > length then
-            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"$NAME$::assert_range failed at "+f+" for instance "+I2S(this)+". Invalid iterator at position: "+I2S(pos)+".")
+            debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"$NAME$::assert_range failed at "+f+" for instance "+I2S(this)+". Iterator "+I2S(pos)+" is out of range.")
         debug endif
 
         return pos >= 0 and pos <= length
@@ -308,7 +308,6 @@ $ACCESS$ struct $NAME$ extends array
     endmethod
 
     method resize takes integer count returns thistype
-        local $TYPE$ value
         if count > length then
             set length = count
         elseif count >= 0 then

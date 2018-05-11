@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.0.2
+*    ItemRecipe v1.1.0.3
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -15,11 +15,23 @@
 *       ListT by Bannar
 *          hiveworkshop.com/threads/containers-list-t.249011/
 *
-*       RegisterPlayerUnitEvent by Bannar
-*          hiveworkshop.com/forums/jass-resources-412/snippet-new-table-188084/
+*       VectorT by Bannar
+*          hiveworkshop.com/threads/containers-vector-t.248942/
 *
-*       SimError by Vexorian
-*          wc3c.net/showthread.php?t=101260&highlight=SimError
+*       RegisterPlayerUnitEvent by Bannar
+*          hiveworkshop.com/threads/snippet-registerevent-pack.250266/
+*
+*
+*    Optional requirements:
+*
+*       InventoryEvent by Bannar
+*          hiveworkshop.com/threads/...
+*
+*       ItemRestriction by Bannar
+*          hiveworkshop.com/threads/...
+*
+*       SmoothItemPickup by Bannar
+*          hiveworkshop.com/threads/...
 *
 ******************************************************************************
 *
@@ -184,7 +196,8 @@ library ItemRecipe requires /*
                    */ RegisterPlayerUnitEvent /*
                    */ ExtensionMethods /*
                    */ optional InventoryEvent /*
-				   */ optional ItemRestriction
+                   */ optional ItemRestriction /*
+                   */ optional SmoothItemPickup
 
 globals
     private ItemRecipe eventRecipe = 0
@@ -194,7 +207,7 @@ globals
     private boolean eventHandled = false
 
     private Table recipeMap
-	
+
     integer EVENT_ITEM_RECIPE_ASSEMBLING
     integer EVENT_ITEM_RECIPE_ASSEMBLED
 endglobals
@@ -247,7 +260,7 @@ struct RecipeIngredient extends array
     boolean perishable
     integer charges
     // if != 0 then it's part of a batch i.e multiple items can fill its spot
-	integer index
+    integer index
 
     implement Alloc
 
@@ -256,7 +269,7 @@ struct RecipeIngredient extends array
         set this.itemTypeId = itemTypeId
         set this.perishable = perishable
         set this.charges = charges
-		set this.index = index
+        set this.index = index
         return this
     endmethod
 
@@ -264,7 +277,7 @@ struct RecipeIngredient extends array
         set itemTypeId = 0
         set perishable = false
         set charges = 0
-		set index = 0
+        set index = 0
         call deallocate()
     endmethod
 
@@ -282,39 +295,19 @@ endstruct
 //! runtextmacro DEFINE_STRUCT_LIST("", "RecipeIngredientList", "RecipeIngredient")
 //! runtextmacro DEFINE_STRUCT_LIST("", "ItemRecipeList", "ItemRecipe")
 
-private module ItemRecipeInit
-    private static method onInit takes nothing returns nothing
-        set EVENT_ITEM_RECIPE_ASSEMBLING = CreateNativeEvent()
-        set EVENT_ITEM_RECIPE_ASSEMBLED = CreateNativeEvent()
-
-        set recipeMap = Table.create()
-
-        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function OnPickup)
-        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_EFFECT, function OnCast)
-static if LIBRARY_InventoryEvent then
-        call RegisterNativeEvent(InventoryEvent.MOVED, function OnMoved)
-endif
-static if LIBRARY_SmoothItemPickup then
-        // Allow for smooth pickup for pickup-type unordered recipes
-        call RegisterNativeEvent(EVENT_ITEM_SMOOTH_PICKUP, function OnSmoothPickup)
-        call AddSmoothItemPickupCondition(RecipeSmoothPickupPredicate.create())
-endif
-    endmethod
-endmodule
-
 struct ItemRecipe extends array
     private RecipeIngredientList ingredients
     readonly integer reward
     boolean ordered
     boolean permanent
-	boolean pickupable
+    boolean pickupable
     integer charges
     readonly integer count
     private integer abilityId
     private boolean batch
 
 static if LIBRARY_ItemRestriction then
-	readonly UnitRequirement requirement
+    readonly UnitRequirement requirement
 endif
     implement Alloc
 
@@ -324,10 +317,10 @@ endif
 
         set ingredients = RecipeIngredientList.create()
         set this.reward = reward
-		set this.charges = charges
+        set this.charges = charges
         set this.ordered = ordered
         set this.permanent = permanent
-		set this.pickupable = pickupable
+        set this.pickupable = pickupable
 static if LIBRARY_ItemRestriction then
         set requirement = 0
 endif
@@ -386,9 +379,9 @@ endif
     endmethod
 
     method destroy takes nothing returns nothing
-		local RecipeIngredientListItem iter = ingredients.first
-		local ItemRecipeList recipes
-		local integer itemTypeId
+        local RecipeIngredientListItem iter = ingredients.first
+        local ItemRecipeList recipes
+        local integer itemTypeId
 
         call setAbility(0)
 
@@ -485,24 +478,24 @@ endif
         return 0
     endmethod
 
-	method startBatch takes nothing returns thistype
-		if not batch then
-			set batch = true
-		debug else
-			debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"ItemRecipe::startBatch failed. Method startBatch() invoked with previous batch not yet ended.")
-		endif
-		return this
-	endmethod
+    method startBatch takes nothing returns thistype
+        if not batch then
+            set batch = true
+        debug else
+            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"ItemRecipe::startBatch failed. Method startBatch() invoked with previous batch not yet ended.")
+        endif
+        return this
+    endmethod
 
-	method endBatch takes nothing returns thistype
-		if batch then
-			set batch = false
-			set count = count + 1
-		debug else
-			debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"ItemRecipe::endBatch failed. Called endBatch() without starting batch previously.")
-		endif
-		return this
-	endmethod
+    method endBatch takes nothing returns thistype
+        if batch then
+            set batch = false
+            set count = count + 1
+        debug else
+            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"ItemRecipe::endBatch failed. Called endBatch() without starting batch previously.")
+        endif
+        return this
+    endmethod
 
     method removeItem takes integer itemTypeId returns thistype
         local RecipeIngredientListItem iter = ingredients.first
@@ -581,17 +574,18 @@ endif
 
     private method orderedSearch takes ItemVector items returns RecipeIngredientVector
         local integer slot = 0
-        local boolean found = false
+        local boolean found
         local item itm
         local integer charges
         local RecipeIngredient ingredient
         local integer idx
         local RecipeIngredientVector resultIngredients = RecipeIngredientVector.create()
         local RecipeIngredientListItem iter = ingredients.first
-        call resultIngredients.resize(count)
+        call resultIngredients.resize(items.size())
 
         loop
             exitwhen iter == 0
+            set found = false
             set itm = items[slot]
             set charges = GetItemCharges(itm)
             set ingredient = iter.data
@@ -631,7 +625,7 @@ endif
     endmethod
 
     private method unorderedSearch takes ItemVector items returns RecipeIngredientVector
-        local boolean found = false
+        local boolean found
         local RecipeIngredient ingredient
         local integer idx
         local integer slot = 0
@@ -641,7 +635,7 @@ endif
         local integer charges
         local RecipeIngredientVector resultIngredients = RecipeIngredientVector.create()
         local RecipeIngredientListItem iter = ingredients.first
-        call resultIngredients.resize(count)
+        call resultIngredients.resize(size)
 
         loop
             exitwhen iter == 0
@@ -654,7 +648,7 @@ endif
                 set slot = 0
                 loop
                     exitwhen slot >= size
-                    if resultIngredients[slot] == null then
+                    if resultIngredients[slot] == 0 then
                         set itm = items[slot]
                         set itemTypeId = GetItemTypeId(itm)
                         set charges = GetItemCharges(itm)
@@ -712,6 +706,7 @@ endif
         local integer slot = 0
         local integer size = UnitInventorySize(whichUnit)
         local ItemVector items = ItemVector.create()
+        local RecipeIngredientVector result
 
         loop
             exitwhen slot >= size
@@ -719,7 +714,9 @@ endif
             set slot = slot + 1
         endloop
 
-        return test(whichUnit, items)
+        set result = test(whichUnit, items)
+        call items.destroy()
+        return result
     endmethod
 
     method assembly takes unit whichUnit, ItemVector fromItems returns boolean
@@ -739,15 +736,16 @@ endif
         call FireEvent(EVENT_ITEM_RECIPE_ASSEMBLING, this, whichUnit, null, resultIngredients)
         if eventHandled then
             set eventHandled = prevHandled
+            call resultIngredients.destroy()
             return false
         endif
 
         loop
             exitwhen i >= size
-
             if resultIngredients[i] != 0 then
                 set ingredient = resultIngredients[i]
                 set itm = fromItems[i]
+
                 if ingredient.charges > 0 then
                     set chrgs = GetItemCharges(itm)
                     if chrgs > ingredient.charges and not ingredient.perishable then
@@ -771,6 +769,8 @@ endif
 
         set eventHandled = prevHandled
         call FireEvent(EVENT_ITEM_RECIPE_ASSEMBLED, this, whichUnit, itm, resultIngredients)
+
+        call resultIngredients.destroy()
         set itm = null
         return true
     endmethod
@@ -779,6 +779,7 @@ endif
         local integer slot = 0
         local integer size = UnitInventorySize(whichUnit)
         local ItemVector items = ItemVector.create()
+        local boolean result
 
         loop
             exitwhen slot >= size
@@ -786,7 +787,9 @@ endif
             set slot = slot + 1
         endloop
 
-        return assembly(whichUnit, items)
+        set result = assembly(whichUnit, items)
+        call items.destroy()
+        return result
     endmethod
 
     method disassembly takes unit whichUnit returns boolean
@@ -866,7 +869,9 @@ function UnitDisassemblyItem takes unit whichUnit, item whichItem returns boolea
     return recipes.front().disassembly(whichUnit)
 endfunction
 
-private function OnInventoryChange takes unit u, item itm returns boolean
+private function OnPickup takes nothing returns boolean
+    local unit u = GetTriggerUnit()
+    local item itm = GetManipulatedItem()
     local integer itemTypeId = GetItemTypeId(itm)
     local ItemRecipeList recipes = ItemRecipe.getRecipesForIngredient(itemTypeId)
     local ItemRecipeListItem iter
@@ -883,16 +888,49 @@ private function OnInventoryChange takes unit u, item itm returns boolean
             set iter = iter.next
         endloop
     endif
-    return false
-endfunction
 
-private function OnPickup takes nothing returns boolean
-    return OnInventoryChange(GetTriggerUnit(), GetManipulatedItem())
+    set u = null
+    set itm = null
+    return false
 endfunction
 
 static if LIBRARY_InventoryEvent then
 private function OnMoved takes nothing returns boolean
-    return OnInventoryChange(GetEventInventoryUnit(), GetEventInventoryItem())
+    local unit u = GetEventInventoryUnit()
+    local item itm = GetEventInventoryItem()
+    local integer itemTypeId = GetItemTypeId(itm)
+    local ItemRecipeList recipes = ItemRecipe.getRecipesForIngredient(itemTypeId)
+    local ItemRecipeListItem iter
+    local ItemRecipe recipe
+    local integer slot = 0
+    local integer size = UnitInventorySize(u)
+    local ItemVector items
+
+    if recipes != 0 then
+        set items = ItemVector.create()
+        loop
+            exitwhen slot >= size
+            call items.push(UnitItemInSlot(u, slot))
+            set slot = slot + 1
+        endloop
+        set items[GetEventInventorySlotFrom()] = GetEventInventorySwapped()
+        set items[GetEventInventorySlotTo()] = itm
+
+        set iter = recipes.first
+        loop
+            exitwhen iter == 0
+            set recipe = iter.data
+            if recipe.pickupable and recipe.assembly(u, items) then
+                exitwhen true
+            endif
+            set iter = iter.next
+        endloop
+        call items.destroy()
+    endif
+
+    set u = null
+    set itm = null
+    return false
 endfunction
 endif
 
@@ -996,5 +1034,29 @@ private struct RecipeSmoothPickupPredicate extends array
     implement optional SmoothPickupPredicateModule
 endstruct
 endif
+
+private module Init
+    private static method onInit takes nothing returns nothing
+        set EVENT_ITEM_RECIPE_ASSEMBLING = CreateNativeEvent()
+        set EVENT_ITEM_RECIPE_ASSEMBLED = CreateNativeEvent()
+
+        set recipeMap = Table.create()
+
+        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function OnPickup)
+        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_EFFECT, function OnCast)
+static if LIBRARY_InventoryEvent then
+        call RegisterNativeEvent(InventoryEvent.MOVED, function OnMoved)
+endif
+static if LIBRARY_SmoothItemPickup then
+        // Allow for smooth pickup for pickup-type unordered recipes
+        call RegisterNativeEvent(EVENT_ITEM_SMOOTH_PICKUP, function OnSmoothPickup)
+        call AddSmoothItemPickupCondition(RecipeSmoothPickupPredicate.create())
+endif
+    endmethod
+endmodule
+
+private struct StructInit extends array
+    implement Init
+endstruct
 
 endlibrary
