@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.0.6
+*    ItemRecipe v1.1.0.7
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -194,7 +194,6 @@ library ItemRecipe requires /*
                    */ ListT /*
                    */ VectorT /*
                    */ RegisterPlayerUnitEvent /*
-                   */ ExtensionMethods /*
                    */ optional InventoryEvent /*
                    */ optional ItemRestriction /*
                    */ optional SmoothItemPickup
