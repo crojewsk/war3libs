@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    Vector<T> v1.1.8.1
+*    Vector<T> v1.1.8.2
 *       by Bannar
 *
 *    Dynamic contiguous array.
@@ -146,7 +146,7 @@ $ACCESS$ struct $NAME$ extends array
 
     private method assert_pos takes integer pos, string f returns boolean
         debug if pos < 0 or pos >= length then
-            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"$NAME$::assert_pos failed at "+f+" for instance "+I2S(this)+". Index "+I2S(pos)+" is out of range.")
+            debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"$NAME$::assert_pos failed at "+f+" for instance "+I2S(this)+". Index "+I2S(pos)+" is out of range.")
         debug endif
 
         return pos >= 0 and pos < length

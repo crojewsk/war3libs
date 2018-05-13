@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    List<T> v2.1.2.1
+*    List<T> v2.1.2.2
 *       by Bannar
 *
 *    Doubly-linked list.
@@ -306,7 +306,7 @@ $ACCESS$ struct $NAME$ extends array
             call deleteNode(node)
             set count = count - 1
         debug else
-            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"$NAME$::pop failed for instance "+I2S(this)+". List is empty.")
+            debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"$NAME$::pop failed for instance "+I2S(this)+". List is empty.")
         endif
         return this
     endmethod
@@ -327,7 +327,7 @@ $ACCESS$ struct $NAME$ extends array
             call deleteNode(node)
             set count = count - 1
         debug else
-            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"$NAME$::shift failed for instance "+I2S(this)+". List is empty.")
+            debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"$NAME$::shift failed for instance "+I2S(this)+". List is empty.")
         endif
         return this
     endmethod
@@ -368,13 +368,13 @@ $ACCESS$ struct $NAME$ extends array
             endif
             return true
         debug else
-            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"$NAME$::erase failed for instance "+I2S(this)+". Attempted to remove invalid node "+I2S(node)+".")
+            debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"$NAME$::erase failed for instance "+I2S(this)+". Attempted to remove invalid node "+I2S(node)+".")
         endif
         return false
     endmethod
 
     method remove takes $NAME$Item node returns boolean
-        debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Method $NAME$::remove is obsolete, use $NAME$::erase instead.")
+        debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Method $NAME$::remove is obsolete, use $NAME$::erase instead.")
         return erase(node)
     endmethod
 
