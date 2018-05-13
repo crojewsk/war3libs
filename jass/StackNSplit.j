@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.1.6
+*    StackNSplit v1.1.1.7
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -559,8 +559,8 @@ private function OnPickup takes nothing returns boolean
 endfunction
 
 private function OnMoved takes nothing returns nothing
-    local unit u = GetEventInventoryUnit()
-    local item itm = GetEventInventoryItem()
+    local unit u = GetInventoryManipulatingUnit()
+    local item itm = GetInventoryManipulatedItem()
     local integer itemTypeId = GetItemTypeId(itm)
     local integer charges
     local item swapped
@@ -570,11 +570,11 @@ private function OnMoved takes nothing returns nothing
     local integer total
     local integer diff
 
-    if GetEventInventorySlotFrom() == GetEventInventorySlotTo() then // splitting
+    if GetInventorySlotFrom() == GetInventorySlotTo() then // splitting
         call UnitSplitItem(u, itm)
     elseif not IsItemContainer(itemTypeId) then
         set charges = GetItemCharges(itm)
-        set swapped = GetEventInventorySwapped()
+        set swapped = GetInventorySwappedItem()
         set swappedTypeId = GetItemTypeId(swapped)
         set swappedCharges = GetItemCharges(swapped)
 

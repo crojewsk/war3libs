@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.0.7
+*    ItemRecipe v1.1.0.8
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -897,8 +897,8 @@ endfunction
 
 static if LIBRARY_InventoryEvent then
 private function OnMoved takes nothing returns boolean
-    local unit u = GetEventInventoryUnit()
-    local item itm = GetEventInventoryItem()
+    local unit u = GetInventoryManipulatingUnit()
+    local item itm = GetInventoryManipulatedItem()
     local integer itemTypeId = GetItemTypeId(itm)
     local ItemRecipeList recipes = ItemRecipe.getRecipesForIngredient(itemTypeId)
     local ItemRecipeListItem iter
@@ -914,8 +914,8 @@ private function OnMoved takes nothing returns boolean
             call items.push(UnitItemInSlot(u, slot))
             set slot = slot + 1
         endloop
-        set items[GetEventInventorySlotFrom()] = GetEventInventorySwapped()
-        set items[GetEventInventorySlotTo()] = itm
+        set items[GetInventorySlotFrom()] = GetInventorySwappedItem()
+        set items[GetInventorySlotTo()] = itm
 
         set iter = recipes.first
         loop
