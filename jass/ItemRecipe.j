@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.0.5
+*    ItemRecipe v1.1.0.6
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -979,6 +979,7 @@ private function GetCheatRecipe takes unit u, item itm returns ItemRecipe
         call items.push(UnitItemInSlot(u, slot))
         set slot = slot + 1
     endloop
+    call items.push(itm)
 
     set iter = recipes.first
     loop
@@ -1030,7 +1031,7 @@ endfunction
 
 private struct RecipeSmoothPickupPredicate extends array
     static method canPickup takes unit whichUnit, item whichItem returns boolean
-        return IsUnitInventoryFull(whichUnit) and GetCheatRecipe(whichUnit, whichItem) != 0
+        return GetCheatRecipe(whichUnit, whichItem) != 0
     endmethod
 
     implement optional SmoothPickupPredicateModule
