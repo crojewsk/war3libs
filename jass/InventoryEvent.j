@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    InventoryEvent v1.0.1.5
+*    InventoryEvent v1.0.1.6
 *       by Bannar
 *
 *    For intuitive inventory event handling.
@@ -23,20 +23,20 @@
 *       GetNativeEventTrigger and GetIndexNativeEventTrigger provide access to trigger handles.
 *
 *
-*       function GetEventInventoryUnit takes nothing returns unit
+*       function GetInventoryManipulatingUnit takes nothing returns unit
 *          Returns unit which manipulated event item.
 *
-*       function GetEventInventoryItem takes nothing returns item
+*       function GetInventoryManipulatedItem takes nothing returns item
 *          Returns manupilated event item.
 *
-*       function GetEventInventorySlotFrom takes nothing returns integer
+*       function GetInventorySlotFrom takes nothing returns integer
 *          Returns slot index of manipulated item from which it was moved or used.
 *
-*       function GetEventInventorySlotTo takes nothing returns integer
+*       function GetInventorySlotTo takes nothing returns integer
 *          Returns slot index of manipulated item to which it was moved.
 *
-*       function GetEventInventorySwapped takes nothing returns item
-*          Returns item which was swapped with manipulated item on MOVED event if any.
+*       function GetInventorySwappedItem takes nothing returns item
+*          Returns item which manipulated item switched position with if any.
 *
 *****************************************************************************/
 library InventoryEvent requires RegisterPlayerUnitEvent, ExtensionMethods
@@ -53,33 +53,58 @@ globals
     private integer eventSlotTo = -1
 endglobals
 
-function GetEventInventoryUnit takes nothing returns unit
+function GetInventoryManipulatingUnit takes nothing returns unit
     return eventUnit
 endfunction
 
-function GetEventInventoryItem takes nothing returns item
+function GetInventoryManipulatedItem takes nothing returns item
     return eventItem
 endfunction
 
-function GetEventInventorySlotFrom takes nothing returns integer
+function GetInventorySlotFrom takes nothing returns integer
     return eventSlotFrom
 endfunction
 
-function GetEventInventorySlotTo takes nothing returns integer
+function GetInventorySlotTo takes nothing returns integer
     return eventSlotTo
 endfunction
 
-function GetEventInventorySwapped takes nothing returns item
+function GetInventorySwappedItem takes nothing returns item
     return UnitItemInSlot(eventUnit, eventSlotTo)
 endfunction
 
+function GetEventInventoryUnit takes nothing returns unit
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventInventoryUnit is obsolete, use GetInventoryManipulatingUnit instead.")
+    return GetInventoryManipulatingUnit()
+endfunction
+
+function GetEventInventoryItem takes nothing returns item
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventInventoryItem is obsolete, use GetInventoryManipulatedItem instead.")
+    return GetInventoryManipulatedItem()
+endfunction
+
+function GetEventInventorySlotFrom takes nothing returns integer
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventInventorySlotFrom is obsolete, use GetInventorySlotFrom instead.")
+    return GetInventorySlotFrom()
+endfunction
+
+function GetEventInventorySlotTo takes nothing returns integer
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventInventorySlotTo is obsolete, use GetInventorySlotTo instead.")
+    return GetInventorySlotTo
+endfunction
+
+function GetEventInventorySwapped takes nothing returns item
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventInventorySwapped is obsolete, use GetInventorySwappedItem instead.")
+    return GetInventorySwappedItem()
+endfunction
+
 function GetInventoryEventTrigger takes integer whichEvent returns trigger
-    debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Function GetInventoryEventTrigger is obsolete, use GetNativeEventTrigger instead.")
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetInventoryEventTrigger is obsolete, use GetNativeEventTrigger instead.")
     return GetNativeEventTrigger(whichEvent)
 endfunction
 
 function RegisterInventoryEvent takes code func, integer whichEvent returns nothing
-    debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Function RegisterInventoryEvent is obsolete, use RegisterNativeEvent instead.")
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function RegisterInventoryEvent is obsolete, use RegisterNativeEvent instead.")
     call RegisterNativeEvent(whichEvent, func)
 endfunction
 
