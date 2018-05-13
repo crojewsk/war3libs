@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.1.6
+*    SmoothItemPickup v1.0.1.7
 *       by Bannar
 *
 *    Allows for item pickup during certain conditions even when unit inventory is full.
@@ -14,6 +14,9 @@
 *
 *       RegisterPlayerUnitEvent by Bannar
 *          hiveworkshop.com/threads/snippet-registerevent-pack.250266/
+*
+*       ListT by Bannar
+*          hiveworkshop.com/threads/containers-list-t.249011/
 *
 ******************************************************************************
 *
@@ -45,7 +48,7 @@
 *    Predicate implementation example:
 *
 *        | struct MyPredicate extends array
-*        |     method canPickup takes unit whichUnit, item whichItem returns boolean
+*        |     static method canPickup takes unit whichUnit, item whichItem returns boolean
 *        |         return true
 *        |     endmethod
 *        |
@@ -67,36 +70,50 @@
 *          Removes specified condition from predicate list.
 *
 *****************************************************************************/
-library SmoothItemPickup requires Alloc, RegisterPlayerUnitEvent
+library SmoothItemPickup requires /*
+                         */ Alloc /*
+                         */ RegisterPlayerUnitEvent /*
+                         */ ListT /*
+                         */ ExtensionMethods
 
 globals
     private constant integer PICK_UP_RANGE = 150
-    
+endglobals
+
+globals
     integer EVENT_ITEM_SMOOTH_PICKUP
 endglobals
 
 native UnitAlive takes unit u returns boolean
 
 globals
-    private IntegerList conditions
+    private IntegerList conditions = 0
     private Table table = 0
     private timer periodic = CreateTimer()
     private unit eventUnit = null
     private item eventItem = null
+
+    private unit argUnit = null
+    private item argItem = null
 endglobals
 
 struct SmoothItemPickupPredicate extends array
+    readonly trigger trigger
     implement Alloc
 
-    method canPickup takes unit whichUnit, item whichItem returns boolean
+    static method canPickup takes unit whichUnit, item whichItem returns boolean
         return false
     endmethod
 
     static method create takes nothing returns thistype
-        return allocate()
+        local thistype this = allocate()
+        set trigger = CreateTrigger()
+        return this
     endmethod
 
     method destroy takes nothing returns nothing
+        call DestroyTrigger(trigger)
+        set trigger = null
         call deallocate()
     endmethod
 endstruct
@@ -104,9 +121,14 @@ endstruct
 module SmoothPickupPredicateModule
     private delegate SmoothItemPickupPredicate predicate
 
+    private static method onInvoke takes nothing returns boolean
+        return thistype.canPickup(argUnit, argItem)
+    endmethod
+
     static method create takes nothing returns thistype
         local thistype this = SmoothItemPickupPredicate.create()
         set predicate = this
+        call TriggerAddCondition(trigger, Condition(function thistype.onInvoke))
         return this
     endmethod
 
@@ -172,15 +194,16 @@ private function OnNullTimer takes nothing returns nothing
 
     call FireEvent(table.unit[id], table.item[-id])
 
-    call table.remove(id)
-    call table.remove(-id)
+    call table.unit.remove(id)
+    call table.item.remove(-id)
     call DestroyTimer(t)
     set t = null
 endfunction
 
 private module SmoothItemPickupInit
-    static method onInit takes nothing returns nothing
+    private static method onInit takes nothing returns nothing
         set EVENT_ITEM_SMOOTH_PICKUP = CreateNativeEvent()
+        set conditions = IntegerList.create()
         set table = Table.create()
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, function thistype.onTargetOrder)
     endmethod
@@ -261,8 +284,6 @@ private struct SmoothItemPickup extends array
     endmethod
 
     static method onTargetOrder takes nothing returns boolean
-        local unit u = GetTriggerUnit()
-        local item itm = GetOrderTargetItem()
         local SmoothItemPickup data
         local boolean proceed = false
         local IntegerListItem iter
@@ -274,8 +295,12 @@ private struct SmoothItemPickup extends array
         local real x
         local real y
         local trigger t
+        set argUnit = GetTriggerUnit()
+        set argItem = GetOrderTargetItem()
 
-        if itm == null or IsItemPowerup(itm) or GetIssuedOrderId() != 851971 then // order smart
+        if not IsUnitInventoryFull(argUnit) or GetIssuedOrderId() != 851971 then // order smart
+            return false
+        elseif argItem == null or IsItemPowerup(argItem) then
             return false
         endif
 
@@ -283,7 +308,7 @@ private struct SmoothItemPickup extends array
         loop
             exitwhen iter == 0
             set condition = iter.data
-            if condition.canPickup(u, itm) then
+            if TriggerEvaluate(condition.trigger) then
                 set proceed = true
                 exitwhen true
             endif
@@ -291,41 +316,37 @@ private struct SmoothItemPickup extends array
         endloop
 
         if not proceed then
-            set u = null
-            set itm = null
             return false
         endif
 
-        set collision = BlzGetUnitCollisionSize(u)
+        set collision = BlzGetUnitCollisionSize(argUnit)
         set range = (PICK_UP_RANGE + collision) * (PICK_UP_RANGE + collision)
 
-        if Test(u, itm, range) then
+        if Test(argUnit, argItem, range) then
             // Ensures order is finished before item is picked up.
             // Fixes the issue with unit moving towards the item location, rather than stopping
             set tmr = CreateTimer()
-            set table.unit[GetHandleId(tmr)] = u
-            set table.item[-GetHandleId(tmr)] = itm
+            set table.unit[GetHandleId(tmr)] = argUnit
+            set table.item[-GetHandleId(tmr)] = argItem
             call TimerStart(tmr, 0.0, false, function OnNullTimer)
             set tmr = null
         else
-            if not table.has(GetHandleId(u)) then
-                set data = SmoothItemPickup.create(u, range)
+            if not table.has(GetHandleId(argUnit)) then
+                set data = SmoothItemPickup.create(argUnit, range)
             else
-                set data = table[GetHandleId(u)]
+                set data = table[GetHandleId(argUnit)]
             endif
-            set data.itm = itm
+            set data.itm = argItem
 
-            set angle = bj_RADTODEG * Atan2(GetUnitY(u) - GetItemY(itm), GetUnitX(u) - GetItemX(itm))
-            set x = GetItemX(itm) + PICK_UP_RANGE * Cos(angle * bj_DEGTORAD)
-            set y = GetItemY(itm) + PICK_UP_RANGE * Sin(angle * bj_DEGTORAD)
+            set angle = bj_RADTODEG * Atan2(GetUnitY(argUnit) - GetItemY(argItem), GetUnitX(argUnit) - GetItemX(argItem))
+            set x = GetItemX(argItem) + PICK_UP_RANGE * Cos(angle * bj_DEGTORAD)
+            set y = GetItemY(argItem) + PICK_UP_RANGE * Sin(angle * bj_DEGTORAD)
             set t = GetAnyPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER)
             call DisableTrigger(t)
-            call IssuePointOrderById(u, 851986, x, y) // order move
+            call IssuePointOrderById(argUnit, 851986, x, y) // order move
             call EnableTrigger(t)
         endif
 
-        set u = null
-        set itm = null
         return false
     endmethod
 

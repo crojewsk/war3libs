@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.0.3
+*    ItemRecipe v1.1.0.4
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -200,6 +200,11 @@ library ItemRecipe requires /*
                    */ optional SmoothItemPickup
 
 globals
+    integer EVENT_ITEM_RECIPE_ASSEMBLING
+    integer EVENT_ITEM_RECIPE_ASSEMBLED
+endglobals
+
+globals
     private ItemRecipe eventRecipe = 0
     private unit eventUnit = null
     private item eventItem = null
@@ -207,9 +212,6 @@ globals
     private boolean eventHandled = false
 
     private Table recipeMap
-
-    integer EVENT_ITEM_RECIPE_ASSEMBLING
-    integer EVENT_ITEM_RECIPE_ASSEMBLED
 endglobals
 
 function GetEventItemRecipe takes nothing returns ItemRecipe
@@ -1027,7 +1029,7 @@ private function OnSmoothPickup takes nothing returns nothing
 endfunction
 
 private struct RecipeSmoothPickupPredicate extends array
-    method canPickup takes unit whichUnit, item whichItem returns boolean
+    static method canPickup takes unit whichUnit, item whichItem returns boolean
         return IsUnitInventoryFull(whichUnit) and GetCheatRecipe(whichUnit, whichItem) != 0
     endmethod
 

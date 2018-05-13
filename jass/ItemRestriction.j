@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRestriction v1.1.0.9
+*    ItemRestriction v1.1.1.0
 *       by Bannar
 *
 *    For restricting or limiting items from being equipped.
@@ -49,7 +49,7 @@
 *    Predicate implementation example:
 *
 *        | struct MyPredicate extends array
-*        |     method isMet takes unit whichUnit returns string
+*        |     static method isMet takes unit whichUnit returns string
 *        |         return "This unit does not meet requirement criteria"
 *        |     endmethod
 *        |
@@ -218,18 +218,28 @@ else
 endif
 endfunction
 
+globals
+    private unit argUnit = null
+    private string retMessage = null
+endglobals
+
 struct UnitRequirementPredicate extends array
+    readonly trigger trigger
     implement Alloc
 
-    method isMet takes unit whichUnit returns string
+    static method isMet takes unit whichUnit returns string
         return null
     endmethod
 
     static method create takes nothing returns thistype
-        return allocate()
+        local thistype this = allocate()
+        set trigger = CreateTrigger()
+        return this
     endmethod
 
     method destroy takes nothing returns nothing
+        call DestroyTrigger(trigger)
+        set trigger = null
         call deallocate()
     endmethod
 endstruct
@@ -237,9 +247,15 @@ endstruct
 module UnitRequirementPredicateModule
     private delegate UnitRequirementPredicate predicate
 
+    private static method onInvoke takes nothing returns boolean
+        set retMessage = thistype.isMet(argUnit)
+        return retMessage == null
+    endmethod
+
     static method create takes nothing returns thistype
         local thistype this = UnitRequirementPredicate.create()
         set predicate = this
+        call TriggerAddCondition(trigger, Condition(function thistype.onInvoke))
         return this
     endmethod
 
@@ -310,7 +326,6 @@ struct UnitRequirement extends array
         local integer unitTypeId = GetUnitTypeId(whichUnit)
         local IntegerListItem iter
         local UnitRequirementPredicate condition
-        local string errorMessage
 
         if not typeIds.empty() and not has(unitTypeId) then
             return GetUnitTypeErrorMessage(this, unitTypeId)
@@ -324,13 +339,13 @@ struct UnitRequirement extends array
             return GetStatisticErrorMessage(this, intelligence, "Intelligence")
         endif
 
+        set argUnit = whichUnit
         set iter = conditions.first
         loop
             exitwhen iter == 0
             set condition = iter.data
-            set errorMessage = condition.isMet(whichUnit)
-            if errorMessage != null then
-                return errorMessage
+            if not TriggerEvaluate(condition.trigger) then
+                return retMessage
             endif
             set iter = iter.next
         endloop

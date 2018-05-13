@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.1.4
+*    StackNSplit v1.1.1.5
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -25,7 +25,7 @@
 *    Optional requirement:
 *
 *       SmoothItemPickup by Bannar
-*          hiveworkshop.com/forums/jass-resources-412/...
+*          hiveworkshop.com/threads/...
 *
 ******************************************************************************
 *
@@ -138,7 +138,7 @@ endglobals
 globals
     private unit eventUnit = null
     private item eventItem = null
-    private integer eventCharges = 0
+    private integer eventCharges = -1
     private TableArray table = 0
 endglobals
 
@@ -307,11 +307,12 @@ function IsUnitItemFullyStacked takes unit whichUnit, integer itemTypeId returns
         loop
             exitwhen iter == 0
             set max = GetItemContainerMaxStacks(iter.data)
+
             if max > 0 then
                 loop
                     exitwhen slot >= size
                     set itm = UnitItemInSlot(whichUnit, slot)
-                    if GetItemTypeId(itm) == itemTypeId and GetItemCharges(itm) < max then
+                    if GetItemTypeId(itm) == iter.data and GetItemCharges(itm) < max then
                         set result = false
                         exitwhen true
                     endif
@@ -462,7 +463,7 @@ function UnitSplitItem takes unit whichUnit, item whichItem returns boolean
 
         set elementType = GetItemContainerItem(itemTypeId)
         set toSplit = GetItemContainerSplitCount(itemTypeId)
-    elseif IsItemStackable(itemTypeId) and charges > 1 then
+    elseif IsItemStackable(itemTypeId) and charges > minCharges then
         set elementType = itemTypeId
         set toSplit = GetItemSplitCount(itemTypeId)
     else
@@ -614,7 +615,7 @@ private function OnSmoothPickup takes nothing returns nothing
 endfunction
 
 private struct StackSmoothPickupPredicate extends array
-    method canPickup takes unit whichUnit, item whichItem returns boolean
+    static method canPickup takes unit whichUnit, item whichItem returns boolean
         local integer itemTypeId = GetItemTypeId(whichItem)
 
         if IsItemContainer(itemTypeId) then
