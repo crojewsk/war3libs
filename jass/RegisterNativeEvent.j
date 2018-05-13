@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    RegisterNativeEvent v1.1.1.2
+*    RegisterNativeEvent v1.1.1.3
 *       by Bannar
 *
 *    Storage of trigger handles for native events.
@@ -10,7 +10,7 @@
 *    Optional requirements:
 *
 *       Table by Bribe
-*          hiveworkshop.com/forums/jass-resources-412/snippet-new-table-188084/
+*          hiveworkshop.com/threads/snippet-new-table.188084/
 *
 ******************************************************************************
 *

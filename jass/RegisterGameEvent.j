@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    RegisterGameEvent v1.0.0.5
+*    RegisterGameEvent v1.0.0.6
 *       by Bannar
 *
 *    Register version of TriggerRegisterGameEvent.
@@ -10,7 +10,7 @@
 *    Requirements:
 *
 *       RegisterNativeEvent by Bannar
-*          hiveworkshop.com/forums/submissions-414/snippet-registerevent-pack-250266/
+*          hiveworkshop.com/threads/snippet-registerevent-pack.250266/
 *
 ******************************************************************************
 *

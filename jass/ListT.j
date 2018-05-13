@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    List<T> v2.1.2.0
+*    List<T> v2.1.2.1
 *       by Bannar
 *
 *    Doubly-linked list.
@@ -10,7 +10,7 @@
 *    Requirements:
 *
 *       Table by Bribe
-*          hiveworkshop.com/forums/jass-resources-412/snippet-new-table-188084/
+*          hiveworkshop.com/threads/snippet-new-table.188084/
 *
 *       Alloc - choose whatever you like
 *          e.g.: by Sevion hiveworkshop.com/threads/snippet-alloc.192348/
