@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    InventoryEvent v1.0.1.4
+*    InventoryEvent v1.0.1.5
 *       by Bannar
 *
 *    For intuitive inventory event handling.
@@ -16,8 +16,8 @@
 *
 *    Event API:
 *
-*       integer InventoryEvent.MOVED
-*       integer InventoryEvent.USED
+*       integer EVENT_INVENTORY_ITEM_MOVED
+*       integer EVENT_INVENTORY_ITEM_USED
 *
 *       Use RegisterNativeEvent or RegisterIndexNativeEvent for event registration.
 *       GetNativeEventTrigger and GetIndexNativeEventTrigger provide access to trigger handles.
@@ -40,6 +40,11 @@
 *
 *****************************************************************************/
 library InventoryEvent requires RegisterPlayerUnitEvent, ExtensionMethods
+
+globals
+    integer EVENT_INVENTORY_ITEM_MOVED
+    integer EVENT_INVENTORY_ITEM_USED
+endglobals
 
 globals
     private unit eventUnit = null
@@ -112,11 +117,11 @@ private function OnItemOrder takes nothing returns nothing
         set itm = GetOrderTargetItem()
         set slotFrom = GetUnitItemSlot(u, itm)
         set slotTo = order - 852002 // moveslot1
-        call FireEvent(InventoryEvent.MOVED, u, itm, slotFrom, slotTo)
+        call FireEvent(EVENT_INVENTORY_ITEM_MOVED, u, itm, slotFrom, slotTo)
     else
         set slotFrom = order - 852008 //  useslot1
         set itm = UnitItemInSlot(u, slotFrom)
-        call FireEvent(InventoryEvent.USED, u, itm, slotFrom, -1)
+        call FireEvent(EVENT_INVENTORY_ITEM_USED, u, itm, slotFrom, -1)
     endif
 
     set u = null
@@ -133,8 +138,10 @@ endfunction
 
 private module InventoryEventInit
     private static method onInit takes nothing returns nothing
-        set MOVED = CreateNativeEvent()
-        set USED = CreateNativeEvent()
+        set EVENT_INVENTORY_ITEM_MOVED = CreateNativeEvent()
+        set EVENT_INVENTORY_ITEM_USED = CreateNativeEvent()
+        set MOVED = EVENT_INVENTORY_ITEM_MOVED
+        set USED = EVENT_INVENTORY_ITEM_USED
 
         // MOVED is order of type TARGET_ORDER yet USED can be anyone of them
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_ORDER, function OnAnyOrder)
@@ -144,6 +151,7 @@ private module InventoryEventInit
 endmodule
 
 struct InventoryEvent extends array
+    // Events below are depreated in favor of EVENT_ alike globals
     readonly static integer MOVED
     readonly static integer USED
 

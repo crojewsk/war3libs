@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.0.4
+*    ItemRecipe v1.1.0.5
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -1047,7 +1047,7 @@ private module Init
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function OnPickup)
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_EFFECT, function OnCast)
 static if LIBRARY_InventoryEvent then
-        call RegisterNativeEvent(InventoryEvent.MOVED, function OnMoved)
+        call RegisterNativeEvent(EVENT_INVENTORY_ITEM_MOVED, function OnMoved)
 endif
 static if LIBRARY_SmoothItemPickup then
         // Allow for smooth pickup for pickup-type unordered recipes

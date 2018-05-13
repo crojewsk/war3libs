@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.1.5
+*    StackNSplit v1.1.1.6
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -639,7 +639,7 @@ private module StackNSplitInit
         set table = TableArray[5]
 
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function OnPickup)
-        call RegisterNativeEvent(InventoryEvent.MOVED, function OnMoved)
+        call RegisterNativeEvent(EVENT_INVENTORY_ITEM_MOVED, function OnMoved)
 static if LIBRARY_SmoothItemPickup then
         call RegisterNativeEvent(EVENT_ITEM_SMOOTH_PICKUP, function OnSmoothPickup)
         call AddSmoothItemPickupCondition(StackSmoothPickupPredicate.create())
