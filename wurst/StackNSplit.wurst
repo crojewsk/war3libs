@@ -173,7 +173,7 @@ public function unit.isItemFullyStacked(int itemTypeId) returns boolean
 
     if not this.isInventoryFull()
         return false
-    else if not isItemStackable(itemTypeId)
+    else if not isItemContainer(itemTypeId)
         return result
 
     int size = this.inventorySize()
@@ -183,7 +183,7 @@ public function unit.isItemFullyStacked(int itemTypeId) returns boolean
             if max > 0
                 for slot = 0 to size - 1
                     itm = this.itemInSlot(slot)
-                    if itm.getTypeId() == itemTypeId and GetItemCharges(itm) < max
+                    if itm.getTypeId() == containerType and GetItemCharges(itm) < max
                         result = false
                         break
 
