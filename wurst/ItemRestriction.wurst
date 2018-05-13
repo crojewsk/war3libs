@@ -1,5 +1,5 @@
 /*
-*  ItemRestriction v1.1.0.8
+*  ItemRestriction v1.1.1.2
 *     by Bannar
 *
 *  For restricting or limiting items from being equipped.
@@ -288,7 +288,7 @@ public class ItemRestriction
 
     /** Validates whether specified unit can hold specified itm given the restriction criteria. */
     function test(unit whichUnit, item whichItem) returns string
-        LimitException exception = null
+        LimitException exception
         int threshold = limit
 
         if not has(whichItem.getTypeId())

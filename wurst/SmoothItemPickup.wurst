@@ -1,5 +1,5 @@
 /*
-*  SmoothItemPickup v1.0.1.3
+*  SmoothItemPickup v1.0.0.6
 *     by Bannar
 *
 *  Allows for item pickup during certain conditions even when unit inventory is full.
@@ -25,15 +25,17 @@ timer periodic = CreateTimer()
 
 class PeriodicData
     use LinkedListModule
-    unit u
+    unit picker
     item itm
     real range
 
-    construct(unit u)
+    construct(unit u, real range)
+        this.picker = u
+        this.range = range
         map.put(u.getHandleId(), this)
 
     ondestroy
-        map.remove(u.getHandleId())
+        map.remove(picker.getHandleId())
 
 unit eventUnit = null
 item eventItem = null
@@ -84,15 +86,15 @@ function onCallback()
     var iter = PeriodicData.iterator()
     while iter.hasNext()
         var data = iter.next()
-        if not data.u.isAlive() or data.u.getCurrentOrder() != Orders.move
+        if not data.picker.isAlive() or data.picker.getCurrentOrder() != Orders.move
             or data.itm == null or data.itm.isOwned()
 
             destroy data
             if PeriodicData.size == 0
                 periodic.pause()
         else
-            if test(data.u, data.itm, data.range)
-                fireEvent(data.u, data.itm)
+            if test(data.picker, data.itm, data.range)
+                fireEvent(data.picker, data.itm)
 
                 destroy data
                 if PeriodicData.size == 0
@@ -105,7 +107,9 @@ function onTargetOrder()
     PeriodicData data
     bool proceed = false
 
-    if itm == null or itm.isPowerup() or GetIssuedOrderId() != SpecialOrders.smart
+    if not u.isInventoryFull() or GetIssuedOrderId() != SpecialOrders.smart
+        return
+    if itm == null or itm.isPowerup()
         return
 
     for condition in conditions
@@ -127,8 +131,7 @@ function onTargetOrder()
         if not map.has(u.getHandleId())
             if PeriodicData.size == 0
                 periodic.startPeriodic(0.031250000, () -> onCallback())
-            data = new PeriodicData(u)
-            data.range = range
+            data = new PeriodicData(u, range)
         else
             data = map.get(u.getHandleId())
         data.itm = itm

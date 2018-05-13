@@ -1,5 +1,5 @@
 /*
-*  StackNSplit v1.1.1.0
+*  StackNSplit v1.1.1.1
 *     by Bannar
 *
 *  Easy item charges stacking and splitting.
@@ -14,7 +14,7 @@ hashtable table = InitHashtable()
 
 unit eventUnit = null
 item eventItem = null
-int eventCharges = 0
+int eventCharges = -1
 trigger eventAddedTrigger = CreateTrigger()
 trigger eventRemovedTrigger = CreateTrigger()
 
@@ -223,7 +223,7 @@ function stackItem(unit u, item itm, item ignored, int withTypeId, int max) retu
 
             if withCharges < max
                 int diff = max - withCharges
-                if diff > charges
+                if diff >= charges
                     with.setCharges(withCharges + charges)
                     itm.remove()
                     fireEvent(eventAddedTrigger, u, with, charges)
