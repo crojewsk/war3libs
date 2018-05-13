@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ClickCouple v1.4.0.1
+*    ClickCouple v1.4.0.2
 *       by Bannar
 *
 *    Detects unit double click event.
@@ -74,34 +74,34 @@ function GetEventClickedUnit takes nothing returns unit
 endfunction
 
 function RegisterDoubleClickEvent takes player whichPlayer, code func returns nothing
-    debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Function RegisterDoubleClickEvent is obsolete, use RegisterIndexNativeEvent instead.")
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function RegisterDoubleClickEvent is obsolete, use RegisterIndexNativeEvent instead.")
     call RegisterIndexNativeEvent(GetPlayerId(whichPlayer), EVENT_PLAYER_DOUBLE_CLICK, func)
 endfunction
 
 function RegisterAnyDoubleClickEvent takes code func returns nothing
-    debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Function RegisterAnyDoubleClickEvent is obsolete, use RegisterNativeEvent instead.")
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function RegisterAnyDoubleClickEvent is obsolete, use RegisterNativeEvent instead.")
     call RegisterNativeEvent(EVENT_PLAYER_DOUBLE_CLICK, func)
 endfunction
 
 function GetDoubleClickEventTrigger takes integer playerId returns trigger
-    debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Function GetDoubleClickEventTrigger is obsolete, use GetIndexNativeEventTrigger instead.")
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetDoubleClickEventTrigger is obsolete, use GetIndexNativeEventTrigger instead.")
     return GetIndexNativeEventTrigger(playerId, EVENT_PLAYER_DOUBLE_CLICK)
 endfunction
 
 module ClickCoupleStruct
     static method operator clicker takes nothing returns player
-        debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Method ClickCoupleStruct::clicker is obsolete, use GetEventClickingPlayer instead.")
+        debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Method ClickCoupleStruct::clicker is obsolete, use GetEventClickingPlayer instead.")
         return GetEventClickingPlayer()
     endmethod
 
     static method operator clicked takes nothing returns unit
-        debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Method ClickCoupleStruct::clicked is obsolete, use GetEventClickedUnit instead.")
+        debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Method ClickCoupleStruct::clicked is obsolete, use GetEventClickedUnit instead.")
         return GetEventClickedUnit()
     endmethod
 
     static if thistype.onDoubleClick.exists then
         private static method onDoubleClickEvent takes nothing returns nothing
-            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"Module ClickCoupleStruct is obsolete, use RegisterNativeEvent directly instead.")
+            debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Module ClickCoupleStruct is obsolete, use RegisterNativeEvent directly instead.")
             static if thistype.filterPlayer.exists then
                 if filterPlayer(GetEventClickingPlayer()) then
                     call thistype(GetEventClickingPlayerId()).onDoubleClick()
