@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    InventoryEvent v1.0.1.6
+*    InventoryEvent v1.0.1.7
 *       by Bannar
 *
 *    For intuitive inventory event handling.
@@ -16,8 +16,8 @@
 *
 *    Event API:
 *
-*       integer EVENT_INVENTORY_ITEM_MOVED
-*       integer EVENT_INVENTORY_ITEM_USED
+*       integer EVENT_ITEM_INVENTORY_MOVE
+*       integer EVENT_ITEM_INVENTORY_USE
 *
 *       Use RegisterNativeEvent or RegisterIndexNativeEvent for event registration.
 *       GetNativeEventTrigger and GetIndexNativeEventTrigger provide access to trigger handles.
@@ -42,8 +42,8 @@
 library InventoryEvent requires RegisterPlayerUnitEvent, ExtensionMethods
 
 globals
-    integer EVENT_INVENTORY_ITEM_MOVED
-    integer EVENT_INVENTORY_ITEM_USED
+    integer EVENT_ITEM_INVENTORY_MOVE
+    integer EVENT_ITEM_INVENTORY_USE
 endglobals
 
 globals
@@ -113,6 +113,7 @@ private function FireEvent takes integer evt, unit u, item itm, integer slotFrom
     local item prevItem = eventItem
     local integer prevSlotFrom = eventSlotFrom
     local integer prevSlotTo = eventSlotTo
+    local integer playerId = GetPlayerId(GetOwningPlayer(u))
 
     set eventUnit = u
     set eventItem = itm
@@ -120,7 +121,9 @@ private function FireEvent takes integer evt, unit u, item itm, integer slotFrom
     set eventSlotTo = slotTo
 
     call TriggerEvaluate(GetNativeEventTrigger(evt))
-    call TriggerEvaluate(GetIndexNativeEventTrigger(GetPlayerId(GetOwningPlayer(u)), evt))
+    if IsNativeEventRegistered(playerId, evt) then
+        call TriggerEvaluate(GetIndexNativeEventTrigger(playerId, evt))
+    endif
 
     set eventUnit = prevUnit
     set eventItem = prevItem
@@ -142,11 +145,11 @@ private function OnItemOrder takes nothing returns nothing
         set itm = GetOrderTargetItem()
         set slotFrom = GetUnitItemSlot(u, itm)
         set slotTo = order - 852002 // moveslot1
-        call FireEvent(EVENT_INVENTORY_ITEM_MOVED, u, itm, slotFrom, slotTo)
+        call FireEvent(EVENT_ITEM_INVENTORY_MOVE, u, itm, slotFrom, slotTo)
     else
         set slotFrom = order - 852008 //  useslot1
         set itm = UnitItemInSlot(u, slotFrom)
-        call FireEvent(EVENT_INVENTORY_ITEM_USED, u, itm, slotFrom, -1)
+        call FireEvent(EVENT_ITEM_INVENTORY_USE, u, itm, slotFrom, -1)
     endif
 
     set u = null
@@ -163,10 +166,10 @@ endfunction
 
 private module InventoryEventInit
     private static method onInit takes nothing returns nothing
-        set EVENT_INVENTORY_ITEM_MOVED = CreateNativeEvent()
-        set EVENT_INVENTORY_ITEM_USED = CreateNativeEvent()
-        set MOVED = EVENT_INVENTORY_ITEM_MOVED
-        set USED = EVENT_INVENTORY_ITEM_USED
+        set EVENT_ITEM_INVENTORY_MOVE = CreateNativeEvent()
+        set EVENT_ITEM_INVENTORY_USE = CreateNativeEvent()
+        set MOVED = EVENT_ITEM_INVENTORY_MOVE
+        set USED = EVENT_ITEM_INVENTORY_USE
 
         // MOVED is order of type TARGET_ORDER yet USED can be anyone of them
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_ORDER, function OnAnyOrder)

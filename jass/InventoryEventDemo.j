@@ -58,8 +58,8 @@ private function Callback takes nothing returns nothing
 endfunction
 
 private function Init takes nothing returns nothing
-    call RegisterNativeEvent(EVENT_INVENTORY_ITEM_MOVED, function OnInventoryMoved)
-    call RegisterNativeEvent(EVENT_INVENTORY_ITEM_USED, function OnInventoryUsed)
+    call RegisterNativeEvent(EVENT_ITEM_INVENTORY_MOVE, function OnInventoryMoved)
+    call RegisterNativeEvent(EVENT_ITEM_INVENTORY_USE, function OnInventoryUsed)
     call TimerStart(CreateTimer(), 1, false, function Callback)
 endfunction
 

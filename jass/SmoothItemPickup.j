@@ -1,16 +1,13 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.1.7
+*    SmoothItemPickup v1.0.1.8
 *       by Bannar
 *
-*    Allows for item pickup during certain conditions even when unit inventory is full.
+*    Allows for item pickup despite unit inventory being full.
 *
 ******************************************************************************
 *
 *    Requirements:
-*
-*       Alloc - choose whatever you like
-*          e.g.: by Sevion hiveworkshop.com/threads/snippet-alloc.192348/
 *
 *       RegisterPlayerUnitEvent by Bannar
 *          hiveworkshop.com/threads/snippet-registerevent-pack.250266/
@@ -71,7 +68,6 @@
 *
 *****************************************************************************/
 library SmoothItemPickup requires /*
-                         */ Alloc /*
                          */ RegisterPlayerUnitEvent /*
                          */ ListT /*
                          */ ExtensionMethods
@@ -160,11 +156,15 @@ endfunction
 private function FireEvent takes unit u, item itm returns nothing
     local unit prevUnit = eventUnit
     local item prevItem = eventItem
+    local integer playerId = GetPlayerId(GetOwningPlayer(u))
+
     set eventUnit = u
     set eventItem = itm
 
     call TriggerEvaluate(GetNativeEventTrigger(EVENT_ITEM_SMOOTH_PICKUP))
-    call TriggerEvaluate(GetIndexNativeEventTrigger(GetPlayerId(GetOwningPlayer(u)), EVENT_ITEM_SMOOTH_PICKUP))
+    if IsNativeEventRegistered(playerId, EVENT_ITEM_SMOOTH_PICKUP) then
+        call TriggerEvaluate(GetIndexNativeEventTrigger(playerId, EVENT_ITEM_SMOOTH_PICKUP))
+    endif
 
     set eventUnit = prevUnit
     set eventItem = prevItem

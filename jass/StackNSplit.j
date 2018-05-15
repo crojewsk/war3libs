@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.1.7
+*    StackNSplit v1.1.1.8
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -127,7 +127,6 @@ library StackNSplit requires /*
                     */ ListT /*
                     */ InventoryEvent /*
                     */ RegisterPlayerUnitEvent /*
-                    */ ExtensionMethods /*
                     */ optional SmoothItemPickup
 
 globals
@@ -246,7 +245,7 @@ function UnsetItemContainer takes integer containerType returns nothing
         call table[3].remove(containerType)
         call table[4].boolean.remove(containerType)
 
-        // remove containerType from containers list
+        // Remove containerType from containers list
         set containers = GetItemContainers(elementType)
         call containers.removeElem(containerType)
         if containers.empty() then
@@ -347,13 +346,16 @@ private function FireEvent takes integer evt, unit u, item itm, integer charges 
     local unit prevUnit = eventUnit
     local item prevItem = eventItem
     local integer prevCharges = eventCharges
+    local integer playerId = GetPlayerId(GetOwningPlayer(u))
 
     set eventUnit = u
     set eventItem = itm
     set eventCharges = charges
 
     call TriggerEvaluate(GetNativeEventTrigger(evt))
-    call TriggerEvaluate(GetIndexNativeEventTrigger(GetPlayerId(GetOwningPlayer(u)), evt))
+    if IsNativeEventRegistered(playerId, evt) then
+        call TriggerEvaluate(GetIndexNativeEventTrigger(playerId, evt))
+    endif
 
     set eventUnit = prevUnit
     set eventItem = prevItem
@@ -639,7 +641,7 @@ private module StackNSplitInit
         set table = TableArray[5]
 
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function OnPickup)
-        call RegisterNativeEvent(EVENT_INVENTORY_ITEM_MOVED, function OnMoved)
+        call RegisterNativeEvent(EVENT_ITEM_INVENTORY_MOVE, function OnMoved)
 static if LIBRARY_SmoothItemPickup then
         call RegisterNativeEvent(EVENT_ITEM_SMOOTH_PICKUP, function OnSmoothPickup)
         call AddSmoothItemPickupCondition(StackSmoothPickupPredicate.create())

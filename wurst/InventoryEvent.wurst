@@ -1,5 +1,5 @@
 /*
-*  InventoryEvent v1.0.0.8
+*  InventoryEvent v1.0.0.9
 *     by Bannar
 *
 *  For intuitive inventory event handling.
@@ -15,8 +15,8 @@ int eventSlotTo = -1
 trigger eventMovedTrigger = CreateTrigger()
 trigger eventUsedTrigger = CreateTrigger()
 
-public constant EVENT_INVENTORY_MOVED = 1
-public constant EVENT_INVENTORY_USED = 2
+public constant EVENT_ITEM_INVENTORY_MOVE = 1
+public constant EVENT_ITEM_INVENTORY_USE = 2
 
 public function getInventoryManipulatingUnit() returns unit
     return eventUnit
@@ -34,15 +34,15 @@ public function getInventorySwappedItem() returns item
     return UnitItemInSlot(eventUnit, eventSlotTo)
 
 public function registerInventoryEvent(int whichEvent, code cb)
-    if whichEvent == EVENT_INVENTORY_MOVED
+    if whichEvent == EVENT_ITEM_INVENTORY_MOVE
         eventMovedTrigger.addCondition(Condition(cb))
-    else if whichEvent == EVENT_INVENTORY_USED
+    else if whichEvent == EVENT_ITEM_INVENTORY_USE
         eventUsedTrigger.addCondition(Condition(cb))
 
 public function getInventoryEventTrigger(int whichEvent) returns trigger
-    if whichEvent == EVENT_INVENTORY_MOVED
+    if whichEvent == EVENT_ITEM_INVENTORY_MOVE
         return eventMovedTrigger
-    else if whichEvent == EVENT_INVENTORY_USED
+    else if whichEvent == EVENT_ITEM_INVENTORY_USE
         return eventUsedTrigger
     return null
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.0.8
+*    ItemRecipe v1.1.0.9
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -8,9 +8,6 @@
 ******************************************************************************
 *
 *    Requirements:
-*
-*       Alloc - choose whatever you like
-*          e.g.: by Sevion hiveworkshop.com/threads/snippet-alloc.192348/
 *
 *       ListT by Bannar
 *          hiveworkshop.com/threads/containers-list-t.249011/
@@ -37,8 +34,7 @@
 *
 *    Event API:
 *
-*       integer EVENT_ITEM_RECIPE_ASSEMBLING
-*       integer EVENT_ITEM_RECIPE_ASSEMBLED
+*       integer EVENT_ITEM_RECIPE_ASSEMBLE
 *
 *       Use RegisterNativeEvent or RegisterIndexNativeEvent for event registration.
 *       GetNativeEventTrigger and GetIndexNativeEventTrigger provide access to trigger handles.
@@ -190,7 +186,6 @@
 *
 *****************************************************************************/
 library ItemRecipe requires /*
-                   */ Alloc /*
                    */ ListT /*
                    */ VectorT /*
                    */ RegisterPlayerUnitEvent /*
@@ -199,8 +194,7 @@ library ItemRecipe requires /*
                    */ optional SmoothItemPickup
 
 globals
-    integer EVENT_ITEM_RECIPE_ASSEMBLING
-    integer EVENT_ITEM_RECIPE_ASSEMBLED
+    integer EVENT_ITEM_RECIPE_ASSEMBLE
 endglobals
 
 globals
@@ -208,7 +202,6 @@ globals
     private unit eventUnit = null
     private item eventItem = null
     private RecipeIngredientVector eventIngredients = 0
-    private boolean eventHandled = false
 
     private Table recipeMap
 endglobals
@@ -229,23 +222,22 @@ function GetEventItemRecipeIngredients takes nothing returns RecipeIngredientVec
     return eventIngredients
 endfunction
 
-function SetEventItemRecipeHandled takes boolean handled returns nothing
-    set eventHandled = handled
-endfunction
-
-private function FireEvent takes integer evt, ItemRecipe recipe, unit u, item it, RecipeIngredientVector ingredients returns nothing
+private function FireEvent takes ItemRecipe recipe, unit u, item it, RecipeIngredientVector ingredients returns nothing
     local ItemRecipe prevRecipe = eventRecipe
     local unit prevUnit = eventUnit
     local item prevItem = eventItem
     local RecipeIngredientVector prevIngredients = eventIngredients
+    local integer playerId = GetPlayerId(GetOwningPlayer(u))
 
     set eventRecipe = recipe
     set eventUnit = u
     set eventItem = it
     set eventIngredients = ingredients
 
-    call TriggerEvaluate(GetNativeEventTrigger(evt))
-    call TriggerEvaluate(GetIndexNativeEventTrigger(GetPlayerId(GetOwningPlayer(u)), evt))
+    call TriggerEvaluate(GetNativeEventTrigger(EVENT_ITEM_RECIPE_ASSEMBLE))
+    if IsNativeEventRegistered(playerId, EVENT_ITEM_RECIPE_ASSEMBLE) then
+        call TriggerEvaluate(GetIndexNativeEventTrigger(playerId, EVENT_ITEM_RECIPE_ASSEMBLE))
+    endif
 
     set eventRecipe = prevRecipe
     set eventUnit = prevUnit
@@ -260,7 +252,7 @@ struct RecipeIngredient extends array
     integer itemTypeId
     boolean perishable
     integer charges
-    // if != 0 then it's part of a batch i.e multiple items can fill its spot
+    // If non 0, then it is part of a batch i.e multiple items can fill its spot
     integer index
 
     implement Alloc
@@ -283,10 +275,6 @@ struct RecipeIngredient extends array
     endmethod
 
     static method operator [] takes thistype other returns thistype
-        if other <= 0 then
-            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"static $NAME$::operator [] failed. Argument 'other': "+I2S(other)+" is invalid.")
-            return 0
-        endif
         return create(other.itemTypeId, other.perishable, other.charges, other.index)
     endmethod
 endstruct
@@ -306,10 +294,10 @@ struct ItemRecipe extends array
     readonly integer count
     private integer abilityId
     private boolean batch
-
 static if LIBRARY_ItemRestriction then
     readonly UnitRequirement requirement
 endif
+
     implement Alloc
 
     static method create takes integer reward, integer charges, boolean ordered, boolean permanent, boolean pickupable returns thistype
@@ -412,15 +400,9 @@ endif
     endmethod
 
     static method operator [] takes thistype other returns thistype
-        local thistype this
-        local RecipeIngredientListItem iter
-        if other <= 0 then
-            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"static $NAME$::operator [] failed. Argument 'other': "+I2S(other)+" is invalid.")
-            return 0
-        endif
+        local thistype this = create(other.reward, other.charges, other.ordered, other.permanent, other.pickupable)
+        local RecipeIngredientListItem iter = other.ingredients.first
 
-        set this = create(other.reward, other.charges, other.ordered, other.permanent, other.pickupable)
-        set iter = other.ingredients.first
         loop
             exitwhen iter == 0
             call this.ingredients.push(RecipeIngredient[iter.data])
@@ -483,7 +465,7 @@ endif
         if not batch then
             set batch = true
         debug else
-            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"ItemRecipe::startBatch failed. Method startBatch() invoked with previous batch not yet ended.")
+            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"ItemRecipe::startBatch failed. Batch is already started.")
         endif
         return this
     endmethod
@@ -493,7 +475,7 @@ endif
             set batch = false
             set count = count + 1
         debug else
-            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"ItemRecipe::endBatch failed. Called endBatch() without starting batch previously.")
+            debug call DisplayTimedTextFromPlayer(GetLocalPlayer(),0,0,60,"ItemRecipe::endBatch failed. No batch has been started.")
         endif
         return this
     endmethod
@@ -721,7 +703,6 @@ endif
     endmethod
 
     method assembly takes unit whichUnit, ItemVector fromItems returns boolean
-        local boolean prevHandled = eventHandled
         local integer size = fromItems.size()
         local RecipeIngredient ingredient
         local item itm
@@ -730,14 +711,6 @@ endif
         local integer i = 0
 
         if resultIngredients == 0 then
-            return false
-        endif
-
-        set eventHandled = false
-        call FireEvent(EVENT_ITEM_RECIPE_ASSEMBLING, this, whichUnit, null, resultIngredients)
-        if eventHandled then
-            set eventHandled = prevHandled
-            call resultIngredients.destroy()
             return false
         endif
 
@@ -768,8 +741,7 @@ endif
         endif
         call UnitAddItem(whichUnit, itm)
 
-        set eventHandled = prevHandled
-        call FireEvent(EVENT_ITEM_RECIPE_ASSEMBLED, this, whichUnit, itm, resultIngredients)
+        call FireEvent(this, whichUnit, itm, resultIngredients)
 
         call resultIngredients.destroy()
         set itm = null
@@ -1039,15 +1011,14 @@ endif
 
 private module Init
     private static method onInit takes nothing returns nothing
-        set EVENT_ITEM_RECIPE_ASSEMBLING = CreateNativeEvent()
-        set EVENT_ITEM_RECIPE_ASSEMBLED = CreateNativeEvent()
+        set EVENT_ITEM_RECIPE_ASSEMBLE = CreateNativeEvent()
 
         set recipeMap = Table.create()
 
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function OnPickup)
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_EFFECT, function OnCast)
 static if LIBRARY_InventoryEvent then
-        call RegisterNativeEvent(EVENT_INVENTORY_ITEM_MOVED, function OnMoved)
+        call RegisterNativeEvent(EVENT_ITEM_INVENTORY_MOVE, function OnMoved)
 endif
 static if LIBRARY_SmoothItemPickup then
         // Allow for smooth pickup for pickup-type unordered recipes

@@ -1,8 +1,8 @@
 /*
-*  SmoothItemPickup v1.0.0.6
+*  SmoothItemPickup v1.0.0.7
 *     by Bannar
 *
-*  Allows for item pickup during certain conditions even when unit inventory is full.
+*  Allows for item pickup despite unit inventory being full.
 */
 package SmoothItemPickup
 import LinkedList
@@ -12,16 +12,19 @@ import RegisterEvents
 import ClosureTimers
 import Orders
 
+let conditions = new LinkedList<SmoothPickupPredicate>()
+let map = new HashMap<int, PeriodicData>()
+timer looper = CreateTimer()
+// Event related globals
+unit eventUnit = null
+item eventItem = null
+trigger eventTrigger = CreateTrigger()
+
 /** Default pickup range degined in gameplay constants. */
 @configurable int PICK_UP_RANGE = 150
 
-let conditions = new LinkedList<SmoothPickupPredicate>()
-
 public interface SmoothPickupPredicate
     function canPickup(unit u, item itm) returns boolean
-
-let map = new HashMap<int, PeriodicData>()
-timer periodic = CreateTimer()
 
 class PeriodicData
     use LinkedListModule
@@ -36,10 +39,6 @@ class PeriodicData
 
     ondestroy
         map.remove(picker.getHandleId())
-
-unit eventUnit = null
-item eventItem = null
-trigger eventTrigger = CreateTrigger()
 
 public function getSmoothItemPickupUnit() returns unit
     return eventUnit
@@ -91,14 +90,14 @@ function onCallback()
 
             destroy data
             if PeriodicData.size == 0
-                periodic.pause()
+                looper.pause()
         else
             if test(data.picker, data.itm, data.range)
                 fireEvent(data.picker, data.itm)
 
                 destroy data
                 if PeriodicData.size == 0
-                    periodic.pause()
+                    looper.pause()
     iter.close()
 
 function onTargetOrder()
@@ -130,7 +129,7 @@ function onTargetOrder()
     else
         if not map.has(u.getHandleId())
             if PeriodicData.size == 0
-                periodic.startPeriodic(0.031250000, () -> onCallback())
+                looper.startPeriodic(0.031250000, () -> onCallback())
             data = new PeriodicData(u, range)
         else
             data = map.get(u.getHandleId())

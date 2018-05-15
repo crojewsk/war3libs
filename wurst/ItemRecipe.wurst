@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.1.6
+*  ItemRecipe v1.0.1.7
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -14,18 +14,12 @@ import SmoothItemPickup
 
 // Global containers for associated recipe list retrieval
 let recipeMap = new HashMap<int, LinkedList<ItemRecipe>>()
-
 // Event related globals
 ItemRecipe eventRecipe = null
 unit eventUnit = null
 item eventItem = null
 HashMap<int, RecipeIngredient> eventIngredients = null
-trigger eventAssemblingTrigger = CreateTrigger()
-trigger eventAssembledTrigger = CreateTrigger()
-boolean eventHandled = false
-
-public constant int EVENT_ITEM_RECIPE_ASSEMBLING = 1
-public constant int EVENT_ITEM_RECIPE_ASSEMBLED = 2
+trigger eventTrigger = CreateTrigger()
 
 /** Returns triggering item recipe. */
 public function getEventItemRecipe() returns ItemRecipe
@@ -44,26 +38,15 @@ public function getEventItemRecipeItem() returns item
 public function getEventItemRecipeIngredients() returns HashMap<int, RecipeIngredient>
     return eventIngredients
 
-/** Sets value indicating if event should be propagated. */
-public function setEventItemRecipeHandled(boolean handled)
-    eventHandled = handled
+/** Registers new event handler for item recipe event. */
+public function registerItemRecipeEvent(code func)
+    eventTrigger.addCondition(Condition(func))
 
-/** Registers new event handler for specified item recipe event. */
-public function registerItemRecipeEvent(int whichEvent, code c)
-    if whichEvent == EVENT_ITEM_RECIPE_ASSEMBLING
-        eventAssemblingTrigger.addCondition(Condition(c))
-    else if whichEvent == EVENT_ITEM_RECIPE_ASSEMBLED
-        eventAssembledTrigger.addCondition(Condition(c))
+/** Returns trigger handle associated with recipe event. */
+public function getItemRecipeEventTrigger() returns trigger
+    return eventTrigger
 
-/** Returns trigger handle associated with specified recipe event. */
-public function getItemRecipeEventTrigger(int whichEvent) returns trigger
-    if whichEvent == EVENT_ITEM_RECIPE_ASSEMBLING
-        return eventAssemblingTrigger
-    else if whichEvent == EVENT_ITEM_RECIPE_ASSEMBLED
-        return eventAssembledTrigger
-    return null
-
-function fireEvent(trigger evt, ItemRecipe recipe, unit u, item itm, HashMap<int, RecipeIngredient> ingredients)
+function fireEvent(ItemRecipe recipe, unit u, item itm, HashMap<int, RecipeIngredient> ingredients)
     ItemRecipe prevRecipe = eventRecipe
     unit prevUnit = eventUnit
     item prevItem = eventItem
@@ -74,7 +57,7 @@ function fireEvent(trigger evt, ItemRecipe recipe, unit u, item itm, HashMap<int
     eventItem = itm
     eventIngredients = ingredients
 
-    evt.evaluate()
+    eventTrigger.evaluate()
 
     eventRecipe = prevRecipe
     eventUnit = prevUnit
@@ -86,6 +69,7 @@ public class RecipeIngredient
     int itemTypeId
     boolean perishable
     int charges
+    // If non 0, then it is part of a batch i.e multiple items can fill its spot
     int index
 
     construct(int itemTypeId, boolean perishable, int charges, int index)
@@ -418,7 +402,6 @@ public class ItemRecipe
 
     /** Attempts to assembly recipe for specified unit given the ingredients list. */
     function assembly(unit whichUnit, LinkedList<item> fromItems) returns boolean
-        boolean prevHandled = eventHandled
         int size = fromItems.size()
         RecipeIngredient ingredient
         item itm
@@ -426,13 +409,6 @@ public class ItemRecipe
 
         let resultIngredients = test(whichUnit, fromItems)
         if resultIngredients == null
-            return false
-
-        eventHandled = false
-        fireEvent(eventAssemblingTrigger, this, whichUnit, null, resultIngredients)
-        if eventHandled
-            eventHandled = prevHandled
-            destroy resultIngredients
             return false
 
         for i = 0 to size - 1
@@ -453,8 +429,7 @@ public class ItemRecipe
             itm.setCharges(charges)
         whichUnit.addItemHandle(itm)
 
-        eventHandled = prevHandled
-        fireEvent(eventAssembledTrigger, this, whichUnit, itm, resultIngredients)
+        fireEvent( this, whichUnit, itm, resultIngredients)
 
         destroy resultIngredients
         return true
@@ -605,7 +580,7 @@ class RecipeSmoothPickupPredicate implements SmoothPickupPredicate
 init
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickup())
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_EFFECT, () -> onCast())
-    registerInventoryEvent(EVENT_INVENTORY_MOVED, () -> onMoved())
+    registerInventoryEvent(EVENT_ITEM_INVENTORY_MOVE, () -> onMoved())
 
     // Allow for smooth pickup for pickup-type unordered recipes
     registerSmoothItemPickupEvent(() -> onSmoothPickup())

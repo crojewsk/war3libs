@@ -9,9 +9,6 @@
 *
 *    Requirements:
 *
-*       Alloc - choose whatever you like
-*          e.g.: by Sevion hiveworkshop.com/threads/snippet-alloc.192348/
-*
 *       ListT by Bannar
 *          hiveworkshop.com/threads/containers-list-t.249011/
 *
@@ -181,7 +178,6 @@
 *
 *****************************************************************************/
 library ItemRestriction requires /*
-                        */ Alloc /*
                         */ ListT /*
                         */ RegisterPlayerUnitEvent /*
                         */ optional SimError

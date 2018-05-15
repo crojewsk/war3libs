@@ -1,5 +1,5 @@
 /*
-*  StackNSplit v1.1.1.1
+*  StackNSplit v1.1.1.2
 *     by Bannar
 *
 *  Easy item charges stacking and splitting.
@@ -11,7 +11,7 @@ import SmoothItemPickup
 import LinkedList
 
 hashtable table = InitHashtable()
-
+// Event related globals
 unit eventUnit = null
 item eventItem = null
 int eventCharges = -1
@@ -130,7 +130,7 @@ public function unsetItemContainer(int containerType)
         table.removeInt(3, containerType)
         table.removeBoolean(4, containerType)
 
-        // remove containerType from containers list
+        // Remove containerType from containers list
         let containers = getItemContainers(elementType)
         containers.remove(containerType)
         if containers.isEmpty()
@@ -396,6 +396,6 @@ class StackSmoothPickupPredicate implements SmoothPickupPredicate
 
 init
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickup())
-    registerInventoryEvent(EVENT_INVENTORY_MOVED, () -> onMoved())
+    registerInventoryEvent(EVENT_ITEM_INVENTORY_MOVE, () -> onMoved())
     registerSmoothItemPickupEvent(() -> onSmoothPickup())
     addSmoothItemPickupCondition(new StackSmoothPickupPredicate())

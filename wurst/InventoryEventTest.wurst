@@ -46,6 +46,6 @@ function start()
     GetExpiredTimer().destr()
 
 init
-    registerInventoryEvent(EVENT_INVENTORY_MOVED, () -> onInventoryMove())
-    registerInventoryEvent(EVENT_INVENTORY_USED, () -> onInventoryUse())
+    registerInventoryEvent(EVENT_ITEM_INVENTORY_MOVE, () -> onInventoryMove())
+    registerInventoryEvent(EVENT_ITEM_INVENTORY_USE, () -> onInventoryUse())
     CreateTimer().start(1, () -> start())

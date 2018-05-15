@@ -3,12 +3,9 @@ import StackNSplit
 import ItemRecipe
 import ClosureTimers
 
-function onAssembling()
+function onAssemble()
     let u = getEventItemRecipeUnit()
-
-    if u.getTypeId() != 'Ofar'
-        setEventItemRecipeHandled(true)
-        print("Vetoed recipe assembling for: " + u.getName())
+    print("Assembling recipe for: " + u.getName())
 
 init
     unit u = CreateUnit(Player(0), 'Ofar', 200, 200, 0)
