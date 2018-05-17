@@ -683,7 +683,7 @@ struct ItemRestriction extends array
         return associated
     endmethod
 
-    private static method onPickup takes nothing returns boolean
+    private static method onPickup takes nothing returns nothing
         local item itm = GetManipulatedItem()
         local integer count
         local unit u
@@ -718,10 +718,9 @@ struct ItemRestriction extends array
         endif
 
         set itm = null
-        return false
     endmethod
 
-    private static method onDrop takes nothing returns boolean
+    private static method onDrop takes nothing returns nothing
         local integer itemTypeId = GetItemTypeId(GetManipulatedItem())
         local ItemRestrictionListItem iter
         local integer count
@@ -729,7 +728,7 @@ struct ItemRestriction extends array
         local ItemRestriction restriction
 
         if not restrictionTable.has(itemTypeId) then
-            return false
+            return
         endif
 
         set iter = ItemRestrictionList(restrictionTable[itemTypeId]).first
@@ -745,11 +744,9 @@ struct ItemRestriction extends array
 
             set iter = iter.next
         endloop
-
-        return false
     endmethod
 
-    private static method onTargetOrder takes nothing returns boolean
+    private static method onTargetOrder takes nothing returns nothing
         local item itm = GetOrderTargetItem()
         local unit u
 
@@ -764,8 +761,6 @@ struct ItemRestriction extends array
             set itm = null
             set u = null
         endif
-
-        return false
     endmethod
 
     private static method onDeindex takes nothing returns nothing

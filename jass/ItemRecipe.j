@@ -842,7 +842,7 @@ function UnitDisassemblyItem takes unit whichUnit, item whichItem returns boolea
     return recipes.front().disassembly(whichUnit)
 endfunction
 
-private function OnPickup takes nothing returns boolean
+private function OnPickup takes nothing returns nothing
     local unit u = GetTriggerUnit()
     local item itm = GetManipulatedItem()
     local integer itemTypeId = GetItemTypeId(itm)
@@ -864,11 +864,10 @@ private function OnPickup takes nothing returns boolean
 
     set u = null
     set itm = null
-    return false
 endfunction
 
 static if LIBRARY_InventoryEvent then
-private function OnMoved takes nothing returns boolean
+private function OnMoved takes nothing returns nothing
     local unit u = GetInventoryManipulatingUnit()
     local item itm = GetInventoryManipulatedItem()
     local integer itemTypeId = GetItemTypeId(itm)
@@ -903,7 +902,6 @@ private function OnMoved takes nothing returns boolean
 
     set u = null
     set itm = null
-    return false
 endfunction
 endif
 

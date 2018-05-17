@@ -510,7 +510,7 @@ function UnitSplitItem takes unit whichUnit, item whichItem returns boolean
     return true
 endfunction
 
-private function PickupItem takes unit u, item itm returns boolean
+private function PickupItem takes unit u, item itm returns nothing
     local integer itemTypeId = GetItemTypeId(itm)
     local integer charges
     local integer elementType
@@ -553,11 +553,10 @@ private function PickupItem takes unit u, item itm returns boolean
     else
         call UnitStackItem(u, itm)
     endif
-    return false
 endfunction
 
-private function OnPickup takes nothing returns boolean
-    return PickupItem(GetTriggerUnit(), GetManipulatedItem())
+private function OnPickup takes nothing returns nothing
+    call PickupItem(GetTriggerUnit(), GetManipulatedItem())
 endfunction
 
 private function OnMoved takes nothing returns nothing

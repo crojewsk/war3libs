@@ -156,12 +156,11 @@ private function OnItemOrder takes nothing returns nothing
     set itm = null
 endfunction
 
-private function OnAnyOrder takes nothing returns boolean
+private function OnAnyOrder takes nothing returns nothing
     local integer order = GetIssuedOrderId()
     if order >= 852002 and order <= 852013 then // between moveslot1 and useslot6
         call OnItemOrder()
     endif
-    return false
 endfunction
 
 private module InventoryEventInit
