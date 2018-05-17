@@ -574,8 +574,8 @@ function onSmoothPickup()
     recipe.assembly(u, items)
 
 class RecipeSmoothPickupPredicate implements SmoothPickupPredicate
-    function canPickup(unit u, item itm) returns boolean
-        return u.isInventoryFull() and getCheatRecipe(u, itm) != null
+    function canPickup(unit whichUnit, item whichItem) returns boolean
+        return whichUnit.isInventoryFull() and getCheatRecipe(whichUnit, whichItem) != null
 
 init
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickup())

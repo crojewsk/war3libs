@@ -24,7 +24,7 @@ trigger eventTrigger = CreateTrigger()
 @configurable int PICK_UP_RANGE = 150
 
 public interface SmoothPickupPredicate
-    function canPickup(unit u, item itm) returns boolean
+    function canPickup(unit whichUnit, item whichItem) returns boolean
 
 class PeriodicData
     use LinkedListModule
@@ -39,6 +39,8 @@ class PeriodicData
 
     ondestroy
         map.remove(picker.getHandleId())
+        if size == 1
+            looper.pause()
 
 public function getSmoothItemPickupUnit() returns unit
     return eventUnit
@@ -87,17 +89,11 @@ function onCallback()
         var data = iter.next()
         if not data.picker.isAlive() or data.picker.getCurrentOrder() != Orders.move
             or data.itm == null or data.itm.isOwned()
-
             destroy data
-            if PeriodicData.size == 0
-                looper.pause()
         else
             if test(data.picker, data.itm, data.range)
                 fireEvent(data.picker, data.itm)
-
                 destroy data
-                if PeriodicData.size == 0
-                    looper.pause()
     iter.close()
 
 function onTargetOrder()
@@ -126,7 +122,7 @@ function onTargetOrder()
         // Fixes the issue with unit moving towards the item location, rather than stopping
         nullTimer() ->
             fireEvent(u, itm)
-    else
+    else // if unit is not nearby target item, issue artificial move order
         if not map.has(u.getHandleId())
             if PeriodicData.size == 0
                 looper.startPeriodic(0.031250000, () -> onCallback())

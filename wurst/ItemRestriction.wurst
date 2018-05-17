@@ -32,7 +32,7 @@ HashMap<int, LinkedList<ItemRestriction>> restrictionsMap
     return "This item can not be picked up by this unit."
 
 public interface UnitRequirementPredicate
-    function isMet(unit u) returns string
+    function isMet(unit whichUnit) returns string
 
 /** Set of unit-specific requirements. */ 
 public class UnitRequirement

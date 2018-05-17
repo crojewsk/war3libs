@@ -173,7 +173,7 @@ public function unit.isItemFullyStacked(int itemTypeId) returns boolean
 
     if not this.isInventoryFull()
         return false
-    else if not isItemContainer(itemTypeId)
+    else if isItemContainer(itemTypeId)
         return result
 
     int size = this.inventorySize()
@@ -385,13 +385,13 @@ function onSmoothPickup()
     pickupItem(getSmoothItemPickupUnit(), getSmoothItemPickupItem())
 
 class StackSmoothPickupPredicate implements SmoothPickupPredicate
-    function canPickup(unit u, item itm) returns boolean
-        int itemTypeId = itm.getTypeId()
+    function canPickup(unit whichUnit, item whichItem) returns boolean
+        int itemTypeId = whichItem.getTypeId()
 
         if isItemContainer(itemTypeId)
-            return not u.isItemFullyStacked(getItemContainerItem(itemTypeId))
+            return not whichUnit.isItemFullyStacked(getItemContainerItem(itemTypeId))
         if isItemStackable(itemTypeId)
-            return not u.isItemFullyStacked(itemTypeId)
+            return not whichUnit.isItemFullyStacked(itemTypeId)
         return false
 
 init
