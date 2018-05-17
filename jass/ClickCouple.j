@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ClickCouple v1.4.0.2
+*    ClickCouple v1.4.0.3
 *       by Bannar
 *
 *    Detects unit double click event.
@@ -37,13 +37,13 @@
 *       GetNativeEventTrigger and GetIndexNativeEventTrigger provide access to trigger handles.
 *
 *
-*       function GetEventClickingPlayer takes nothing returns player
+*       function GetDoubleClickingPlayer takes nothing returns player
 *          Retrieves player who performed double click event.
 *
-*       function GetEventClickingPlayerId takes nothing returns integer
+*       function GetDoubleClickingPlayerId takes nothing returns integer
 *          Returns index of event player.
 *
-*       function GetEventClickedUnit takes nothing returns unit
+*       function GetDoubleClickedUnit takes nothing returns unit
 *          Retrieves unit which has been double clicked.
 *
 *****************************************************************************/
@@ -51,7 +51,9 @@ library ClickCouple requires RegisterPlayerUnitEvent optional Table
 
 globals
     private constant real PERIOD  = 0.30
+endglobals
 
+globals
     integer EVENT_PLAYER_DOUBLE_CLICK
 endglobals
 
@@ -61,16 +63,31 @@ globals
     private unit eventUnit = null
 endglobals
 
-function GetEventClickingPlayer takes nothing returns player
+function GetDoubleClickingPlayer takes nothing returns player
     return eventPlayer
 endfunction
 
-function GetEventClickingPlayerId takes nothing returns integer
+function GetDoubleClickingPlayerId takes nothing returns integer
     return GetPlayerId(eventPlayer)
 endfunction
 
-function GetEventClickedUnit takes nothing returns unit
+function GetDoubleClickedUnit takes nothing returns unit
     return eventUnit
+endfunction
+
+function GetEventClickingPlayer takes nothing returns player
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventClickingPlayer is obsolete, use GetDoubleClickingPlayer instead.")
+    return GetDoubleClickingPlayer()
+endfunction
+
+function GetEventClickingPlayerId takes nothing returns integer
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventClickingPlayerId is obsolete, use GetDoubleClickingPlayerId instead.")
+    return GetDoubleClickingPlayerId()
+endfunction
+
+function GetEventClickedUnit takes nothing returns unit
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventClickedUnit is obsolete, use GetDoubleClickedUnit instead.")
+    return GetDoubleClickedUnit()
 endfunction
 
 function RegisterDoubleClickEvent takes player whichPlayer, code func returns nothing
