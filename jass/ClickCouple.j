@@ -24,7 +24,7 @@
 *
 *    Configurables:
 *
-*       constant real PERIOD
+*       constant real INTERVAL
 *          Maximum delay between separate clicks to fire double click event.
 *
 ******************************************************************************
@@ -50,7 +50,7 @@
 library ClickCouple requires RegisterPlayerUnitEvent optional Table
 
 globals
-    private constant real PERIOD  = 0.30
+    private constant real INTERVAL  = 0.30
 endglobals
 
 globals
@@ -180,7 +180,7 @@ private struct ClickCouple extends array
 
 static if LIBRARY_Table then
         if table[id].unit.has(unitId) and table[id].unit[unitId] == u and /*
-        */ (table[id].real[unitId] + PERIOD) > TimerGetElapsed(clock) then
+        */ (table[id].real[unitId] + INTERVAL) > TimerGetElapsed(clock) then
             call FireEvent(p, u)
             call table[id].flush()
         else
@@ -189,7 +189,7 @@ static if LIBRARY_Table then
         endif
 else
         if HaveSavedHandle(table, id, unitId) and LoadUnitHandle(table, id, unitId) == u and /*
-        */ (LoadReal(table, id, unitId) + PERIOD) > TimerGetElapsed(clock) then
+        */ (LoadReal(table, id, unitId) + INTERVAL) > TimerGetElapsed(clock) then
             call FireEvent(p, u)
             call FlushChildHashtable(table, id)
         else
