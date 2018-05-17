@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRestriction v1.1.1.1
+*    ItemRestriction v1.1.1.2
 *       by Bannar
 *
 *    For restricting or limiting items from being equipped.
@@ -298,10 +298,10 @@ struct UnitRequirement extends array
         return typeIds.find(unitTypeId) != 0
     endmethod
 
-    method requireStat takes integer str, integer agi, integer int returns thistype
+    method requireStat takes integer str, integer agi, integer intel returns thistype
         set strength = str
         set agility = agi
-        set intelligence = int
+        set intelligence = intel
 
         return this
     endmethod
