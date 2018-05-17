@@ -90,7 +90,7 @@ endfunction
 
 function GetEventInventorySlotTo takes nothing returns integer
     debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventInventorySlotTo is obsolete, use GetInventorySlotTo instead.")
-    return GetInventorySlotTo
+    return GetInventorySlotTo()
 endfunction
 
 function GetEventInventorySwapped takes nothing returns item

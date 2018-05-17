@@ -381,7 +381,7 @@ $ACCESS$ struct $NAME$ extends array
     method removeElem takes $TYPE$ value returns thistype
         local $NAME$Item node = find(value)
         if node != 0 then
-            call remove(node)
+            call erase(node)
         endif
         return this
     endmethod
