@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.1.8
+*    StackNSplit v1.1.1.9
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.

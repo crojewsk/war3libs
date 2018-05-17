@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.0.9
+*    ItemRecipe v1.1.1.0
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -343,7 +343,7 @@ endif
 
         if this.abilityId != 0 then
             set recipes = recipeMap[this.abilityId]
-            call recipes.remove(recipes.find(this))
+            call recipes.erase(recipes.find(this))
             if recipes.empty() then
                 call recipes.destroy()
                 call recipeMap.remove(this.abilityId)
@@ -379,7 +379,7 @@ endif
 
             set itemTypeId = iter.data.itemTypeId
             set recipes = recipeMap[itemTypeId]
-            call recipes.remove(recipes.find(this))
+            call recipes.erase(recipes.find(this))
             if recipes.empty() then
                 call recipes.destroy()
                 call recipeMap.remove(itemTypeId)
@@ -389,7 +389,7 @@ endif
         endloop
 
         set recipes = recipeMap[-reward]
-        call recipes.remove(recipes.find(this))
+        call recipes.erase(recipes.find(this))
         if recipes.empty() then
             call recipes.destroy()
             call recipeMap.remove(-reward)
@@ -498,7 +498,7 @@ endif
                     set count = count - 1
                 endif
 
-                call ingredients.remove(iter)
+                call ingredients.erase(iter)
                 set found = true
                 exitwhen true
             endif

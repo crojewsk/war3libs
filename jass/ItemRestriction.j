@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRestriction v1.1.1.0
+*    ItemRestriction v1.1.1.1
 *       by Bannar
 *
 *    For restricting or limiting items from being equipped.
@@ -314,7 +314,7 @@ struct UnitRequirement extends array
 
     method removeCondition takes UnitRequirementPredicate predicate returns nothing
         if predicate != 0 then
-            call conditions.remove(conditions.find(predicate))
+            call conditions.erase(conditions.find(predicate))
         endif
     endmethod
 
@@ -431,7 +431,7 @@ struct ItemRestriction extends array
             exitwhen iter == 0
             set restrictions = restrictionTable[iter.data]
             set node = restrictions.find(this)
-            call restrictions.remove(node)
+            call restrictions.erase(node)
             if restrictions.empty() then
                 call restrictions.destroy()
                 call restrictionTable.remove(iter.data)
@@ -441,7 +441,7 @@ struct ItemRestriction extends array
 
         set restrictions = restrictionTable[0]
         set node = restrictions.find(this)
-        call restrictions.remove(node)
+        call restrictions.erase(node)
 
         if not exclusives.empty() then
             set iter = exclusives.first
@@ -449,7 +449,7 @@ struct ItemRestriction extends array
                 exitwhen iter == 0
                 set exclusive = iter.data
                 set node = exclusive.exclusives.find(this)
-                call exclusive.exclusives.remove(node)
+                call exclusive.exclusives.erase(node)
                 set iter = iter.next
             endloop
         endif
@@ -472,11 +472,11 @@ struct ItemRestriction extends array
         local ItemRestrictionListItem node
 
         if has(itemTypeId) then
-            call typeIds.remove(typeIds.find(itemTypeId))
+            call typeIds.erase(typeIds.find(itemTypeId))
 
             set restrictions = restrictionTable[itemTypeId]
             set node = restrictions.find(this)
-            call restrictions.remove(node)
+            call restrictions.erase(node)
             if restrictions.empty() then
                 call restrictions.destroy()
                 call restrictionTable.remove(itemTypeId)
@@ -519,7 +519,7 @@ struct ItemRestriction extends array
             exitwhen iter == 0
             set exception = iter.data
             if exception.requirement == requirement then
-                call exceptions.remove(iter)
+                call exceptions.erase(iter)
                 call exception.destroy()
                 exitwhen true
             endif
@@ -554,9 +554,9 @@ struct ItemRestriction extends array
         local ItemRestrictionListItem node = exclusives.find(restriction)
 
         if node != 0 then
-            call exclusives.remove(node)
+            call exclusives.erase(node)
             set node = restriction.exclusives.find(this)
-            call restriction.exclusives.remove(node)
+            call restriction.exclusives.erase(node)
         endif
 
         return this

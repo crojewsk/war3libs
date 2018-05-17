@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.1.8
+*    SmoothItemPickup v1.0.1.9
 *       by Bannar
 *
 *    Allows for item pickup despite unit inventory being full.
@@ -150,7 +150,7 @@ endfunction
 
 function RemoveSmoothItemPickupCondition takes SmoothItemPickupPredicate predicate returns nothing
     if predicate != 0 then
-        call conditions.remove(conditions.find(predicate))
+        call conditions.erase(conditions.find(predicate))
     endif
 endfunction
 
@@ -201,7 +201,7 @@ private struct PeriodicData extends array
         set unit = null
         set item = null
 
-        call ongoing.remove(ongoing.find(this))
+        call ongoing.erase(ongoing.find(this))
         if ongoing.empty() then
             call PauseTimer(looper)
         endif

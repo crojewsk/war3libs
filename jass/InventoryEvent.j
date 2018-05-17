@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    InventoryEvent v1.0.1.7
+*    InventoryEvent v1.0.1.8
 *       by Bannar
 *
 *    For intuitive inventory event handling.
