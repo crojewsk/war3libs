@@ -1,296 +1,213 @@
 /*****************************************************************************
 *
-*    ConstructEvent v2.1.2.0
-*       by Bannar aka Spinnaker
+*    ConstructEvent v2.2.0.0
+*       by Bannar
 *
-*    Provides functionality of generic CONSTRUCT events.
+*    Provides complete solution to construction events.
 *    Allows to retrieve unit which actually started construction of given structure.
 *
 ******************************************************************************
 *
 *    Requirements:
 *
-*       Unit Indexer library - supports:
+*       RegisterPlayerUnitEvent by Bannar
+*          hiveworkshop.com/threads/snippet-registerevent-pack.250266/
 *
-*        | UnitIndexerGUI by Bribe
-*        |    hiveworkshop.com/forums/submissions-414/snippet-gui-unit-indexer-vjass-plugin-268592/
-*        |
-*        | UnitIndexer by Nestharus
-*        |    hiveworkshop.com/forums/jass-functions-413/unit-indexer-172090/
+*       ListT by Bannar
+*          hiveworkshop.com/threads/containers-list-t.249011/
 *
-*    Optionaly uses:
-*
-*       RegisterPlayerUnitEvent library - supports:
-*
-*        | RegisterPlayerUnitEvent by Bannar
-*        |    hiveworkshop.com/forums/submissions-414/snippet-registerevent-pack-250266/
-*        |
-*        | RegisterPlayerUnitEvent by Magtheridon96
-*        |    hiveworkshop.com/forums/jass-resources-412/snippet-registerplayerunitevent-203338/
+*       UnitDex by TriggerHappy
+*          hiveworkshop.com/threads/system-unitdex-unit-indexer.248209/
 *
 ******************************************************************************
 *
-*    struct ConstructEvent:
+*    Event API:
 *
-*       readonly static START
-*          generic START event
+*       integer EVENT_UNIT_CONSTRUCTION_START
 *
-*       readonly static CANCEL
-*          specific stop event i.e. fires on intentional construction stop
+*       integer EVENT_UNIT_CONSTRUCTION_CANCEL
+*          Intentional construction stop.
 *
-*       readonly static FINISH
-*          generic FINISH event
+*       integer EVENT_UNIT_CONSTRUCTION_FINISH
 *
-*       readonly static INTERRUPT
-*          specific stop event i.e. fires on undesired construction stop e.g. unit death
+*       integer EVENT_UNIT_CONSTRUCTION_INTERRUPT
+*          Undesired construction stop e.g. unit death.
+*
+*       Use RegisterNativeEvent or RegisterIndexNativeEvent for event registration.
+*       GetNativeEventTrigger and GetIndexNativeEventTrigger provide access to trigger handles.
+*
+*
+*       function GetConstructingBuilder takes nothing returns unit
+*          Retrieves event builder unit, valid only for START event.
+*
+*       function GetConstructingBuilderId takes nothing returns integer
+*          Returns index of builder unit.
+*
+*       function GetTriggeringStructure takes nothing returns unit
+*          Retrieves event structure unit.
+*
+*       function GetTriggeringStructureId takes nothing returns integer
+*          Returns index of constructed structure unit.
 *
 ******************************************************************************
 *
 *    Functions:
 *
-*       function GetStructureBuilder takes unit u returns unit
-*          gets unit which constructed given structure
+*       function GetStructureBuilder takes unit whichUnit returns unit
+*          Gets unit which constructed given structure.
 *
-*       function GetStructureBuilderById takes integer id returns unit
-*          gets unit which constructed given structure
+*       function GetStructureBuilderById takes integer whichIndex returns unit
+*          Gets unit which constructed given structure.
 *
-*       function GetEventBuilder takes nothing returns unit
-*          retrieves event builder unit; valid only on START event
-*
-*       function GetEventBuilderId takes nothing returns integer
-*          index of builder unit
-*
-*       function GetEventStructure takes nothing returns unit
-*          retrieves event structure unit
-*
-*       function GetEventStructureId takes nothing returns integer
-*          index of structure unit
-*
-*       function IsStructureFinished takes unit u returns boolean
-*          checks whether structure has completed its construction
-*
-*       function RegisterConstructEvent takes code c, integer ev returns nothing
-*          registers given function with construct event type
-*
-*       function TriggerRegisterConstructEvent takes trigger t, integer ev returns nothing
-*          connects trigger handle with construct event type
-*
-*       function GetConstructEventTrigger takes integer whichEvent returns trigger
-*          returns event trigger corresponding to construct event whichEvent
+*       function IsStructureFinished takes unit whichUnit returns boolean
+*          Checks whether construction of provided structure has been completed.
 *
 *****************************************************************************/
-library ConstructEvent requires /*
-                     */ optional UnitIndexerGUI /*
-                     */ optional UnitIndexer /*
-                     */ optional RegisterPlayerUnitEvent
+library ConstructEvent requires RegisterPlayerUnitEvent, ListT, UnitDex
 
 globals
+    integer EVENT_UNIT_CONSTRUCTION_START
+    integer EVENT_UNIT_CONSTRUCTION_FINISH
+    integer EVENT_UNIT_CONSTRUCTION_CANCEL
+    integer EVENT_UNIT_CONSTRUCTION_INTERRUPT
+endglobals
+
+native UnitAlive takes unit id returns boolean
+
+globals
+    private IntegerList ongoing = 0
     private timer looper = CreateTimer()
     private unit eventBuilder = null
     private unit eventConstruct = null
 
     private unit array builders
     private boolean array finished
-
     private integer array instances
     private boolean array cancelled
-
-    private trigger array triggers
-    private real caller = 0
 endglobals
 
-native UnitAlive takes unit id returns boolean
-
-function GetStructureBuilder takes unit u returns unit
-    return builders[GetUnitId(u)]
-endfunction
-
-function GetStructureBuilderById takes integer id returns unit
-    return builders[id]
-endfunction
-
-function GetEventBuilder takes nothing returns unit
+function GetConstructingBuilder takes nothing returns unit
     return eventBuilder
 endfunction
 
-function GetEventBuilderId takes nothing returns integer
+function GetConstructingBuilderId takes nothing returns integer
     return GetUnitId(eventBuilder)
 endfunction
 
-function GetEventStructure takes nothing returns unit
+function GetTriggeringStructure takes nothing returns unit
     return eventConstruct
 endfunction
 
-function GetEventStructureId takes nothing returns integer
+function GetTriggeringStructureId takes nothing returns integer
     return GetUnitId(eventConstruct)
 endfunction
 
-function IsStructureFinished takes unit u returns boolean
-    return finished[GetUnitId(u)]
+function GetStructureBuilder takes unit whichUnit returns unit
+    return builders[GetUnitId(whichUnit)]
 endfunction
 
-private function RegisterAnyUnitEvent takes playerunitevent e, code c returns nothing
-    static if LIBRARY_RegisterPlayerUnitEvent then
-        static if RPUE_VERSION_NEW then
-            call RegisterAnyPlayerUnitEvent(e, c)
-        else
-            call RegisterPlayerUnitEvent(e, c)
-        endif
+function GetStructureBuilderById takes integer whichIndex returns unit
+    return builders[whichIndex]
+endfunction
+
+function IsStructureFinished takes unit whichUnit returns boolean
+    return finished[GetUnitId(whichUnit)]
+endfunction
+
+private function FireEvent takes integer evt, unit builder, unit structure returns nothing
+    local unit prevBuilder = eventBuilder
+    local unit prevConstruct = eventConstruct
+    local integer playerId = GetPlayerId(GetOwningPlayer(builder))
+
+    set eventBuilder = builder
+    set eventConstruct = structure
+
+    call TriggerEvaluate(GetNativeEventTrigger(evt))
+    if IsNativeEventRegistered(playerId, evt) then
+        call TriggerEvaluate(GetIndexNativeEventTrigger(playerId, evt))
+    endif
+
+    set eventBuilder = prevBuilder
+    set eventConstruct = prevConstruct
+    set prevBuilder = null
+    set prevConstruct = null
+endfunction
+
+/*
+*  Unit with no path-texture can be placed in 'arbitrary' location, that is, its x and y
+*  won't have integral values. Whatmore, those values will be modified, depending on quarter of
+*  coordinate axis where unit is going to be built. This takes form of rounding up and down to 
+*  0.250-floor.
+*
+*  Calculus is different for positive (+x/+y) and negative values (-x/-y).
+*  This function makes sure data is translated accordingly.
+*/
+private function TranslateXY takes real r returns real
+    if r >= 0 then
+        return R2I(r / 0.250) * 0.250
     else
-        local trigger t = CreateTrigger()
-        call TriggerRegisterAnyUnitEventBJ(t, e)
-        call TriggerAddCondition(t, Condition(c))
-        set t = null
+        return (R2I(r / 0.250) - 1) * 0.250
     endif
 endfunction
 
-private module ConstructEventInit
-    private static method onInit takes nothing returns nothing
-        call RegisterAnyUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, function thistype.onDifferentOrder)
-        call RegisterAnyUnitEvent(EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER, function thistype.onPointOrder)
-        call RegisterAnyUnitEvent(EVENT_PLAYER_UNIT_ISSUED_ORDER, function thistype.onDifferentOrder)
+/*
+*  Whether issued order can be counted as a build-ability order. Accounts for:
+*  orders between useslot1 and useslot6, plus build tiny building - item ability.
+*  Build type: start and forget, just like undead Acolytes do.
+*/
+private function IsBuildOrder takes integer o returns boolean
+    return (o >= 852008 and o <= 852013) or (o == 852619)
+endfunction
 
-        call RegisterAnyUnitEvent(EVENT_PLAYER_UNIT_CONSTRUCT_CANCEL, function thistype.onConstructCancel)
-        call RegisterAnyUnitEvent(EVENT_PLAYER_UNIT_CONSTRUCT_FINISH, function thistype.onConstructFinish)
+/*
+*  On the contrary to what's described in TranslateXY regarding building position,
+*  builder will have his coords "almost" unchanged. This creates situation
+*  where builder and construct do not share the same location (x & y).
+*
+*  Additionally, builder's coords will differ from order's by a small margin. It could be
+*  negligible if not for the fact that difference can be greater than or equal to 0.001.
+*  In consequence, this invalidates usage of '==' operator when comparing coords
+*  (i. e. jass reals - 3 significant digits displayed).
+*/
+private function IsUnitWithinCoords takes unit u, real x, real y returns boolean
+    return (RAbsBJ(GetUnitX(u) - x) == 0) and (RAbsBJ(GetUnitY(u) - y) == 0)
+endfunction
 
-        static if LIBRARY_UnitIndexerGUI then
-            call OnUnitIndex(function thistype.onIndex)
-            call OnUnitDeindex(function thistype.onDeindex)
-        elseif LIBRARY_UnitIndexer then
-            call RegisterUnitIndexEvent(Condition(function thistype.onIndex), UnitIndexer.INDEX)
-            call RegisterUnitIndexEvent(Condition(function thistype.onDeindex), UnitIndexer.DEINDEX)
-        endif
+private struct PeriodicData extends array
+    unit builder     // unit which started construction
+    race btype       // build-type, race dependant
+    real cx          // future construction point x
+    real cy          // future construction point y
+    real distance    // for distance measurement, UD/HUM only
+    integer order    // unit-type order id
+    real ox          // order point x
+    real oy          // order point y
 
-        set triggers[START] = CreateTrigger()
-        set triggers[CANCEL] = CreateTrigger()
-        set triggers[FINISH] = CreateTrigger()
-        set triggers[INTERRUPT] = CreateTrigger()
-    endmethod
-endmodule
+    implement Alloc
 
-struct ConstructEvent extends array
-    private static integer count = 0
-    private thistype recycle
-    private thistype next
-    private thistype prev
-
-    readonly static integer START = 1
-    readonly static integer CANCEL = 2
-    readonly static integer FINISH = 3
-    readonly static integer INTERRUPT = 4
-
-    private unit builder
-    private race btype
-    private real cx
-    private real cy
-    private real distance
-    private integer order
-
-    private real ox
-    private real oy
-
-    private static method fire takes unit builder, unit construct, integer ev returns nothing
-        local unit prevBuilder = eventBuilder
-        local unit prevConstruct = eventConstruct
-
-        set eventBuilder = builder
-        set eventConstruct = construct
-
-        set caller = ev
-        call TriggerEvaluate(triggers[ev])
-        set caller = 0
-
-        set eventBuilder = prevBuilder
-        set eventConstruct = prevConstruct
-        set prevBuilder = null
-        set prevConstruct = null
-    endmethod
-
-    private static method translateXY takes real r returns real
-        if ( r >= 0 ) then
-            return R2I(r / 0.250) * 0.250
-        else
-            return (R2I(r / 0.250) - 1) * 0.250
-        endif
-    endmethod
-
-    private static method orderCounts takes integer o returns boolean
-        return ( o >= 852008 and o <= 852013 ) or ( o == 852619 )
-    endmethod
-
-    private static method withinCoords takes unit u, real x, real y returns boolean
-        return ( RAbsBJ(GetUnitX(u) - x) == 0 ) and ( RAbsBJ(GetUnitY(u) - y) == 0 )
-    endmethod
-
-    private method deallocate takes nothing returns nothing
-        set recycle = thistype(0).recycle
-        set thistype(0).recycle = this
-        set next.prev = prev
-        set prev.next = next
-
-        if ( thistype(0).next == 0 ) then
-            call PauseTimer(looper)
-        endif
-    endmethod
-
-    private method destroy takes nothing returns nothing
+    method destroy takes nothing returns nothing
         set instances[GetUnitId(builder)] = 0
         set builder = null
         set btype = null
 
+        call ongoing.erase(ongoing.find(this))
+        if ongoing.empty() then
+            call PauseTimer(looper)
+        endif
+
         call deallocate()
     endmethod
 
-    private static method onCallback takes nothing returns nothing
-        local thistype this = thistype(0).next
-        local real dx
-        local real dy
-
-        loop
-            exitwhen this == 0
-
-            if not UnitAlive(builder) then
-                call destroy()
-            elseif ( btype == RACE_UNDEAD or btype == RACE_HUMAN ) then
-                set dx = cx - GetUnitX(builder)
-                set dy = cy - GetUnitY(builder)
-                set distance = ( dx*dx + dy*dy )
-            endif
-
-            set this = next
-        endloop
-    endmethod
-
-    private static method allocate takes nothing returns thistype
-        local thistype this = thistype(0).recycle
-        if ( thistype(0).next == 0 ) then
-            call TimerStart(looper, 0.031250000, true, function thistype.onCallback)
-        endif
-
-        if ( this == 0 ) then
-            set count = count + 1
-            set this = count
-        else
-            set thistype(0).recycle = recycle
-        endif
-
-        set next = 0
-        set prev = thistype(0).prev
-        set thistype(0).prev.next = this
-        set thistype(0).prev = this
-
-        return this
-    endmethod
-
-    private static method create takes thistype this, unit u, integer orderId, boolean flag, real x, real y returns thistype
-        if ( this == 0 ) then
+    static method create takes thistype this, unit u, integer orderId, boolean flag, real x, real y returns thistype
+        if this == 0 then
             set this = allocate()
             set builder = u
             set instances[GetUnitId(u)] = this
+            call ongoing.push(this)
         endif
 
         set order = orderId
-        if ( flag ) then
+        if flag then // ability based build order
             set btype = RACE_UNDEAD
         else
             set btype = GetUnitRace(builder)
@@ -301,146 +218,218 @@ struct ConstructEvent extends array
         set ox = cx
         set oy = cy
 
-        if ( cx - I2R(R2I(cx)) != 0 ) then
-            set cx = translateXY(cx)
+        if cx - I2R(R2I(cx)) != 0 then
+            set cx = TranslateXY(cx)
         endif
-        if ( cy - I2R(R2I(cy)) != 0 ) then
-            set cy = translateXY(cy)
+        if cy - I2R(R2I(cy)) != 0 then
+            set cy = TranslateXY(cy)
         endif
 
         return this
     endmethod
+endstruct
 
-    private static method onDifferentOrder takes nothing returns boolean
-        local unit u = GetTriggerUnit()
-        local unit target = GetOrderTargetUnit()
-        local integer index = GetUnitId(u)
-        local integer orderId = GetIssuedOrderId()
-        local thistype instance = instances[index]
+private function OnCallback takes nothing returns nothing
+    local IntegerListItem iter = ongoing.first
+    local PeriodicData obj
+    local real dx
+    local real dy
 
-        if ( orderId > 900000 and target != null ) then
-            call create(instance, u, orderId, true, GetUnitX(target), GetUnitY(target))
-            set target =  null
+    loop
+        exitwhen iter == 0
+        set obj = iter.data
 
-        elseif ( instance != 0 ) then
-            call instance.destroy()
-
-        elseif ( orderId == 851976 and builders[index] != null and not finished[index] ) then
-            if not IsUnitType(u, UNIT_TYPE_STRUCTURE) then
-                set cancelled[index] = true
-                call fire(null, u, CANCEL)
-            endif
+        if not UnitAlive(obj.builder) then
+            call obj.destroy()
+        elseif obj.btype == RACE_UNDEAD or obj.btype == RACE_HUMAN then
+            set dx = obj.cx - GetUnitX(obj.builder)
+            set dy = obj.cy - GetUnitY(obj.builder)
+            set obj.distance = dx*dx + dy*dy
         endif
 
-        set u = null
-        return false
-    endmethod
+        set iter = iter.next
+    endloop
+endfunction
 
-    private static method onPointOrder takes nothing returns boolean
-        local unit u = GetTriggerUnit()
-        local integer orderId = GetIssuedOrderId()
-        local thistype instance = instances[GetUnitId(u)]
-        local boolean flag = orderCounts(orderId)
+private function OnNonPointOrder takes nothing returns nothing
+    local unit u = GetTriggerUnit()
+    local unit target = GetOrderTargetUnit()
+    local integer index = GetUnitId(u)
+    local integer orderId = GetIssuedOrderId()
+    local PeriodicData obj = instances[index]
 
-        if ( orderId > 900000 or flag ) then
-            call create(instance, u, orderId, flag, GetOrderPointX(), GetOrderPointY())
-        elseif ( instance != 0 ) then
-            call instance.destroy()
+    // Non handle-type orders usually take 852XXX form and are below 900000
+    if orderId > 900000 and target != null then
+        if ongoing.empty() then
+            call TimerStart(looper, 0.031250000, true, function OnCallback)
         endif
+        call PeriodicData.create(obj, u, orderId, true, GetUnitX(target), GetUnitY(target))
 
-        set u = null
-        return false
-    endmethod
+        set target =  null
+    elseif obj != 0 then
+        call obj.destroy()
+    elseif orderId == 851976 and builders[index] != null and not finished[index] then // order cancel
+        if not IsUnitType(u, UNIT_TYPE_STRUCTURE) then
+            set cancelled[index] = true
+            call FireEvent(EVENT_UNIT_CONSTRUCTION_CANCEL, null, u)
+        endif
+    endif
 
-    private static method onConstructCancel takes nothing returns boolean
-        local unit u = GetTriggerUnit()
+    set u = null
+endfunction
 
-        set cancelled[GetUnitId(u)] = true
-        call fire(null, u, CANCEL)
+private function OnPointOrder takes nothing returns nothing
+    local unit u = GetTriggerUnit()
+    local integer orderId = GetIssuedOrderId()
+    local PeriodicData obj = instances[GetUnitId(u)]
+    local boolean isBuildOrder = IsBuildOrder(orderId)
 
-        set u = null
-        return false
-    endmethod
+    // Non handle-type orders usually take 852XXX form and are below 900000
+    if orderId > 900000 or isBuildOrder then
+        if ongoing.empty() then
+            call TimerStart(looper, 0.031250000, true, function OnCallback)
+        endif
+        call PeriodicData.create(obj, u, orderId, isBuildOrder, GetOrderPointX(), GetOrderPointY())
+    elseif obj != 0 then
+        call obj.destroy()
+    endif
 
-    private static method onConstructFinish takes nothing returns boolean
-        local unit u = GetTriggerUnit()
+    set u = null
+endfunction
 
-        set finished[GetUnitId(u)] = true
-        call fire(null, u, FINISH)
+private function OnConstructCancel takes nothing returns nothing
+    local unit u = GetTriggerUnit()
 
-        set u = null
-        return false
-    endmethod
+    set cancelled[GetUnitId(u)] = true
+    call FireEvent(EVENT_UNIT_CONSTRUCTION_CANCEL, null, u)
 
-    private static method onIndex takes nothing returns boolean
-        local unit u = GetIndexedUnit()
-        local integer id = GetUnitTypeId(u)
-        local thistype this = thistype(0).next
-        local thistype found = 0
-        local real d = 1000000
+    set u = null
+endfunction
 
-        loop
-            exitwhen this == 0
+private function OnConstructFinish takes nothing returns nothing
+    local unit u = GetTriggerUnit()
 
-            if ( order == id or orderCounts(order) ) then
-                if ( cx == GetUnitX(u) and cy == GetUnitY(u) ) then
-                    if ( btype == RACE_HUMAN or btype == RACE_UNDEAD ) then
-                        if ( distance < d ) then
-                            set d = distance
-                            set found = this
-                        endif
-                    elseif ( withinCoords(builder, ox, oy) ) then
-                        set found = this
-                        exitwhen true
+    set finished[GetUnitId(u)] = true
+    call FireEvent(EVENT_UNIT_CONSTRUCTION_FINISH, null, u)
+
+    set u = null
+endfunction
+
+private function OnIndex takes nothing returns nothing
+    local unit u = GetIndexedUnit()
+    local integer id = GetUnitTypeId(u)
+    local IntegerListItem iter = ongoing.first
+    local PeriodicData obj
+    local PeriodicData found = 0
+    local real d = 1000000
+
+    loop
+        exitwhen iter == 0
+        set obj = iter.data
+
+        if obj.order == id or IsBuildOrder(obj.order) then
+            if obj.cx == GetUnitX(u) and obj.cy == GetUnitY(u) then
+                if obj.btype == RACE_HUMAN or obj.btype == RACE_UNDEAD then
+                    if obj.distance < d then
+                        set d = obj.distance
+                        set found = obj
                     endif
+                elseif IsUnitWithinCoords(obj.builder, obj.ox, obj.oy) then
+                    set found = obj
+                    exitwhen true
                 endif
             endif
-
-            set this = next
-        endloop
-
-        if ( found != 0 ) then
-            set builders[GetIndexedUnitId()] = found.builder
-            call fire(found.builder, u, START)
-            call found.destroy()
         endif
 
-        set u = null
-        return false
-    endmethod
+        set iter = iter.next
+    endloop
 
-    private static method onDeindex takes nothing returns boolean
-        local thistype index = GetIndexedUnitId()
+    if found != 0 then
+        set builders[GetIndexedUnitId()] = found.builder
+        call FireEvent(EVENT_UNIT_CONSTRUCTION_START, found.builder, u)
+        call found.destroy()
+    endif
 
-        if ( instances[index] != 0 ) then
-            call thistype(instances[index]).destroy()
+    set u = null
+endfunction
 
-        elseif ( builders[index] != null ) then
-            if not ( finished[index] or cancelled[index] ) then
-                call fire(null, GetIndexedUnit(), INTERRUPT)
-            endif
+private function OnDeindex takes nothing returns nothing
+    local integer index = GetIndexedUnitId()
 
-            set builders[index] = null
-            set finished[index] = false
-            set cancelled[index] = false
+    if instances[index] != 0 then
+        call PeriodicData(instances[index]).destroy()
+    elseif builders[index] != null then
+        if not finished[index] or cancelled[index] then
+            call FireEvent(EVENT_UNIT_CONSTRUCTION_INTERRUPT, null, GetIndexedUnit())
         endif
 
-        return false
+        set builders[index] = null
+        set finished[index] = false
+        set cancelled[index] = false
+    endif
+endfunction
+
+private module ConstructEventInit
+    private static method onInit takes nothing returns nothing
+        set EVENT_UNIT_CONSTRUCTION_START = CreateNativeEvent()
+        set EVENT_UNIT_CONSTRUCTION_CANCEL = CreateNativeEvent()
+        set EVENT_UNIT_CONSTRUCTION_FINISH = CreateNativeEvent()
+        set EVENT_UNIT_CONSTRUCTION_INTERRUPT = CreateNativeEvent()
+        set START = EVENT_UNIT_CONSTRUCTION_START
+        set CANCEL = EVENT_UNIT_CONSTRUCTION_CANCEL
+        set FINISH = EVENT_UNIT_CONSTRUCTION_FINISH
+        set INTERRUPT = EVENT_UNIT_CONSTRUCTION_INTERRUPT
+
+        set ongoing = IntegerList.create()
+
+        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, function OnNonPointOrder)
+        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER, function OnPointOrder)
+        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_ORDER, function OnNonPointOrder)
+        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_CONSTRUCT_CANCEL, function OnConstructCancel)
+        call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_CONSTRUCT_FINISH, function OnConstructFinish)
+
+        call RegisterUnitIndexEvent(Condition(function OnIndex), EVENT_UNIT_INDEX)
+        call RegisterUnitIndexEvent(Condition(function OnDeindex), EVENT_UNIT_DEINDEX)
     endmethod
+endmodule
+
+struct ConstructEvent
+    readonly static integer START
+    readonly static integer CANCEL
+    readonly static integer FINISH
+    readonly static integer INTERRUPT
 
     implement ConstructEventInit
 endstruct
 
-function RegisterConstructEvent takes code c, integer ev returns nothing
-    call TriggerAddCondition(triggers[ev], Condition(c))
+function GetEventBuilder takes nothing returns unit
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventBuilder is obsolete, use GetContructingBuilder instead.")
+    return GetConstructingBuilder()
 endfunction
 
-function TriggerRegisterConstructEvent takes trigger t, integer ev returns nothing
-    call TriggerRegisterVariableEvent(t, SCOPE_PRIVATE + "caller", EQUAL, ev)
+function GetEventBuilderId takes nothing returns integer
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventBuilderId is obsolete, use GetContructingBuilderId instead.")
+    return GetConstructingBuilderId()
+endfunction
+
+function GetEventStructure takes nothing returns unit
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventStructure is obsolete, use GetContructedStructure instead.")
+    return GetTriggeringStructure()
+endfunction
+
+function GetEventStructureId takes nothing returns integer
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetEventStructureId is obsolete, use GetContructedStructureId instead.")
+    return GetTriggeringStructureId()
+endfunction
+
+function RegisterConstructEvent takes code func, integer whichEvent returns nothing
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function RegisterConstructEvent is obsolete, use RegisterNativeEvent instead.")
+    call RegisterNativeEvent(whichEvent, func)
 endfunction
 
 function GetConstructEventTrigger takes integer whichEvent returns trigger
-    return triggers[whichEvent]
+    debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"Function GetConstructEventTrigger is obsolete, use GetIndexNativeEventTrigger instead.")
+    return GetNativeEventTrigger(whichEvent)
 endfunction
 
 endlibrary

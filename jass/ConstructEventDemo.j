@@ -1,41 +1,36 @@
-struct ConstructEventDemo extends array
+scope ConstructEventDemo initializer Init
 
-    private static method onStart takes nothing returns nothing
-        call DisplayTimedTextToPlayer( GetLocalPlayer(), 0, 0, 5, GetUnitName(GetEventBuilder())+" started construction of: "+/*
-        */GetUnitName(GetEventStructure())+" builder index: "+I2S(GetEventBuilderId())+/*
-        */" life pts: "+R2S(GetWidgetLife(GetEventBuilder())))
-    endmethod
+private function OnStart takes nothing returns nothing
+    call DisplayTimedTextToPlayer(GetLocalPlayer(), 0, 0, 5, GetUnitName(GetConstructingBuilder())+" started construction of: "+/*
+    */GetUnitName(GetTriggeringStructure())+" builder index: "+I2S(GetConstructingBuilderId())+/*
+    */" builder life pts: "+R2S(GetWidgetLife(GetConstructingBuilder())))
+endfunction
 
-    private static method onCancel takes nothing returns boolean
-        call DisplayTimedTextToPlayer( GetLocalPlayer(), 0, 0, 5, GetUnitName(GetEventBuilder())+" cancelled construction of: "+/*
-        */GetUnitName(GetEventStructure())+" structure index: "+I2S(GetEventStructureId())+/*
-        */" life pts: "+R2S(GetWidgetLife(GetEventBuilder())))
-        return false
-    endmethod
+private function OnCancel takes nothing returns boolean
+    call DisplayTimedTextToPlayer(GetLocalPlayer(), 0, 0, 5, GetUnitName(GetConstructingBuilder())+" cancelled construction of: "+/*
+    */GetUnitName(GetTriggeringStructure())+" structure index: "+I2S(GetTriggeringStructureId())+/*
+    */" builder life pts: "+R2S(GetWidgetLife(GetConstructingBuilder())))
+    return false
+endfunction
 
-    private static method onInterrupt takes nothing returns boolean
-        call DisplayTimedTextToPlayer( GetLocalPlayer(), 0, 0, 5, GetUnitName(GetEventBuilder())+" construction interrupted: "+/*
-        */GetUnitName(GetEventStructure())+" structure index: "+I2S(GetEventStructureId())+/*
-        */" life pts: "+R2S(GetWidgetLife(GetEventBuilder())))
-        return false
-    endmethod
+private function OnFinish takes nothing returns nothing
+    call DisplayTimedTextToPlayer(GetLocalPlayer(), 0, 0, 5, GetUnitName(GetConstructingBuilder())+" finished construction of: "+/*
+    */GetUnitName(GetTriggeringStructure())+" structure index: "+I2S(GetTriggeringStructureId())+/*
+    */" builder life pts: "+R2S(GetWidgetLife(GetConstructingBuilder())))
+endfunction
 
-    private static method onFinish takes nothing returns nothing
-        call DisplayTimedTextToPlayer( GetLocalPlayer(), 0, 0, 5, GetUnitName(GetEventBuilder())+" finished construction of: "+/*
-        */GetUnitName(GetEventStructure())+" structure index: "+I2S(GetEventStructureId())+/*
-        */" life pts: "+R2S(GetWidgetLife(GetEventBuilder())))
-    endmethod
+private function OnInterrupt takes nothing returns boolean
+    call DisplayTimedTextToPlayer(GetLocalPlayer(), 0, 0, 5, GetUnitName(GetConstructingBuilder())+" construction interrupted: "+/*
+    */GetUnitName(GetTriggeringStructure())+" structure index: "+I2S(GetTriggeringStructureId())+/*
+    */" builder life pts: "+R2S(GetWidgetLife(GetConstructingBuilder())))
+    return false
+endfunction
 
-    private static method onInit takes nothing returns nothing
-        local trigger t = CreateTrigger()
+private function Init takes nothing returns nothing
+    call RegisterNativeEvent(EVENT_UNIT_CONSTRUCTION_START, function OnStart)
+    call RegisterNativeEvent(EVENT_UNIT_CONSTRUCTION_CANCEL, function OnCancel)
+    call RegisterNativeEvent(EVENT_UNIT_CONSTRUCTION_FINISH, function OnFinish)
+    call RegisterNativeEvent(EVENT_UNIT_CONSTRUCTION_INTERRUPT, function OnInterrupt)
+endfunction
 
-        call TriggerRegisterConstructEvent(t, ConstructEvent.CANCEL)
-        call TriggerAddCondition(t, Condition(function thistype.onCancel))
-        set t = null
-
-        call RegisterConstructEvent(function thistype.onStart, ConstructEvent.START)
-        call RegisterConstructEvent(function thistype.onInterrupt, ConstructEvent.INTERRUPT)
-        call RegisterConstructEvent(function thistype.onFinish, ConstructEvent.FINISH)
-    endmethod
-
-endstruct
+endscope
