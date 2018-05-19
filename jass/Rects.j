@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    Rects v2.0.1.0
+*    Rects v2.0.1.1
 *       by Bannar
 *
 *    Handly rectangle manipulation.
@@ -22,7 +22,7 @@
 *
 *    Interface RectsForCellAction:
 *
-*       static method cellAction takes real x, real y returns nothing
+*       static method forCell takes real x, real y returns nothing
 *          Performs action on specified rectangle cell.
 *
 *       module RectsForCellActionModule
@@ -32,7 +32,7 @@
 *    Action implementation example:
 *
 *        | struct MyAction extends array
-*        |     static method cellAction takes real x, real y returns nothing
+*        |     static method forCell takes real x, real y returns nothing
 *        |         return CreateItem('crys', x, y)
 *        |     endmethod
 *        |
@@ -85,7 +85,7 @@
 *        | method refresh takes nothing returns nothing
 *        |    Forces a refresh on the underlying rect handle.
 *        |
-*        | method moveTo takes real x, real y returns nothing
+*        | method moveTo takes real x, real y returns thistype
 *        |    Center rect to specified coordinates.
 *        |
 *        | method empty takes nothing returns boolean
@@ -105,7 +105,7 @@
 *        | method deflate takes real dx, real dy returns thistype
 *        |    Decreases the rectangle size.
 *        |
-*        | method offset takes real dx, real dy returns nothing
+*        | method offset takes real dx, real dy returns thistype
 *        |    Moves the rectangle by the specified offset.
 *        |
 *        | method intersect takes Rects r returns thistype
@@ -120,7 +120,7 @@
 *        | method union takes Rects r returns thistype
 *        |    Modifies the rectangle to contain the bounding box of this rectangle and the one passed in as parameter.
 *        |
-*        | method forCell takes RectsForCellAction action returns nothing
+*        | method forEach takes RectsForCellAction action, real radius returns thistype
 *        |    Performs the specified action on each cell found within rectangle.
 *
 *
@@ -131,7 +131,7 @@
 *        |    Factory ctors.
 *        |
 *        | method containsCoord takes Coord c returns boolean
-*        | method offsetCoord takes Coord c returns nothing
+*        | method offsetCoord takes Coord c returns thistype
 *        |
 *        | method inflateSize takes Size s returns thistype
 *        | method deflateSize takes Size s returns thistype
@@ -150,7 +150,7 @@ endglobals
 struct RectsForCellAction extends array
     implement Alloc
 
-    static method cellAction takes real x, real y returns nothing
+    static method forCell takes real x, real y returns nothing
         return
     endmethod
 
@@ -171,7 +171,7 @@ module RectsForCellActionModule
     private delegate RectsForCellAction parent
 
     private static method onInvoke takes nothing returns nothing
-        call cellAction(argX, argY)
+        call forCell(argX, argY)
     endmethod
 
     static method create takes nothing returns thistype
@@ -261,10 +261,11 @@ endif
         call SetRect(rect, minX, minY, maxX, maxY)
     endmethod
 
-    method moveTo takes real x, real y returns nothing
+    method moveTo takes real x, real y returns thistype
         set minX = x - (width * 0.5)
         set minY = y - (height * 0.5)
         call refresh()
+        return this
     endmethod
 
     method empty takes nothing returns boolean
@@ -352,10 +353,11 @@ endif
         return inflate(-dx, -dy)
     endmethod
 
-    method offset takes real dx, real dy returns nothing
+    method offset takes real dx, real dy returns thistype
         set minX = minX + dx
         set minY = minY + dy
         call refresh()
+        return this
     endmethod
 
     method intersect takes Rects r returns thistype
@@ -470,24 +472,25 @@ endif
         return this
     endmethod
 
-    method forCell takes RectsForCellAction action returns nothing
+    method forEach takes RectsForCellAction action, real radius returns thistype
         local real x = minX
         local real y
 
         loop
-            exitwhen x >= maxX
             set y = minY
             loop
-                exitwhen y >= maxY    
-
                 set argX = x
                 set argY = y
                 call TriggerEvaluate(triggers[action])
 
-                set y = y + 32
+                set y = y + radius
+                exitwhen y > maxY
             endloop
-            set x = x + 32
+            set x = x + radius
+            exitwhen x > maxX
         endloop
+
+        return this
     endmethod
 
 static if LIBRARY_Real2D then
@@ -519,8 +522,8 @@ static if LIBRARY_Real2D then
         return contains(c.x, c.y)
     endmethod
 
-    method offsetCoord takes Coord c returns nothing
-        call offset(c.x, c.y)
+    method offsetCoord takes Coord c returns thistype
+        return offset(c.x, c.y)
     endmethod
 
     method inflateSize takes Size s returns thistype
