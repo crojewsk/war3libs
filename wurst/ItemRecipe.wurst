@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.1.7
+*  ItemRecipe v1.0.1.8
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -107,6 +107,7 @@ public class ItemRecipe
         requirement = null
         abilityId = 0
         count = 0
+        batch = false
 
         LinkedList<ItemRecipe> recipes
         if not recipeMap.has(-reward)

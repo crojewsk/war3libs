@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.1.0
+*    ItemRecipe v1.1.1.1
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -315,6 +315,7 @@ static if LIBRARY_ItemRestriction then
 endif
         set abilityId = 0
         set count = 0
+        set batch = false
 
         if not recipeMap.has(-reward) then
             set recipes = ItemRecipeList.create()

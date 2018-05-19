@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.1.9
+*    SmoothItemPickup v1.0.2.0
 *       by Bannar
 *
 *    Allows for item pickup despite unit inventory being full.
@@ -35,7 +35,7 @@
 *
 *    Interface SmoothItemPickupPredicate:
 *
-*       method canPickup takes unit whichUnit, item whichItem returns boolean
+*       static method canPickup takes unit whichUnit, item whichItem returns boolean
 *          Determinates whether unit can pickup specified item.
 *
 *       module SmoothPickupPredicateModule
@@ -90,12 +90,12 @@ globals
     private unit eventUnit = null
     private item eventItem = null
 
+    private trigger array triggers
     private unit argUnit = null
     private item argItem = null
 endglobals
 
 struct SmoothItemPickupPredicate extends array
-    readonly trigger trigger
     implement Alloc
 
     static method canPickup takes unit whichUnit, item whichItem returns boolean
@@ -104,13 +104,13 @@ struct SmoothItemPickupPredicate extends array
 
     static method create takes nothing returns thistype
         local thistype this = allocate()
-        set trigger = CreateTrigger()
+        set triggers[this] = CreateTrigger()
         return this
     endmethod
 
     method destroy takes nothing returns nothing
-        call DestroyTrigger(trigger)
-        set trigger = null
+        call DestroyTrigger(triggers[this])
+        set triggers[this] = null
         call deallocate()
     endmethod
 endstruct
@@ -125,7 +125,7 @@ module SmoothPickupPredicateModule
     static method create takes nothing returns thistype
         local thistype this = SmoothItemPickupPredicate.create()
         set predicate = this
-        call TriggerAddCondition(trigger, Condition(function thistype.onInvoke))
+        call TriggerAddCondition(triggers[this], Condition(function thistype.onInvoke))
         return this
     endmethod
 
@@ -278,7 +278,7 @@ private function OnTargetOrder takes nothing returns nothing
     loop
         exitwhen iter == 0
         set condition = iter.data
-        if TriggerEvaluate(condition.trigger) then
+        if TriggerEvaluate(triggers[condition]) then
             set proceed = true
             exitwhen true
         endif

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRestriction v1.1.1.2
+*    ItemRestriction v1.1.1.3
 *       by Bannar
 *
 *    For restricting or limiting items from being equipped.
@@ -36,7 +36,7 @@
 *
 *    Interface UnitRequirementPredicate:
 *
-*       method isMet takes unit whichUnit returns string
+*       static method isMet takes unit whichUnit returns string
 *          Returns null if criteria are met and error message if not.
 *
 *       module UnitRequirementPredicateModule
@@ -81,14 +81,17 @@
 *        |    Name associated with requirement.
 *
 *
-*       Methods:
+*       General:
 *
 *        | static method create takes string name returns thistype
 *        |    Default ctor.
 *        |
 *        | method destroy takes nothing returns nothing
 *        |    Default dctor.
-*        |
+*
+*
+*       Methods:
+*
 *        | method has takes integer unitTypeId returns boolean
 *        |    Whether specified unit type is a part of requirement.
 *        |
@@ -133,14 +136,17 @@
 *        |    Name associated with restriction.
 *
 *
-*       Methods:
+*       General:
 *
 *        | static method create takes string name, integer limit returns thistype
 *        |    Default ctor.
 *        |
 *        | method destroy takes nothing returns nothing
 *        |    Default dctor.
-*        |
+*
+*
+*       Methods:
+*
 *        | method has takes integer itemTypeId returns boolean
 *        |    Whether specified item type is a part of restriction.
 *        |
@@ -215,12 +221,12 @@ endif
 endfunction
 
 globals
+    private trigger array triggers
     private unit argUnit = null
     private string retMessage = null
 endglobals
 
 struct UnitRequirementPredicate extends array
-    readonly trigger trigger
     implement Alloc
 
     static method isMet takes unit whichUnit returns string
@@ -229,13 +235,13 @@ struct UnitRequirementPredicate extends array
 
     static method create takes nothing returns thistype
         local thistype this = allocate()
-        set trigger = CreateTrigger()
+        set triggers[this] = CreateTrigger()
         return this
     endmethod
 
     method destroy takes nothing returns nothing
-        call DestroyTrigger(trigger)
-        set trigger = null
+        call DestroyTrigger(triggers[this])
+        set triggers[this] = null
         call deallocate()
     endmethod
 endstruct
@@ -251,7 +257,7 @@ module UnitRequirementPredicateModule
     static method create takes nothing returns thistype
         local thistype this = UnitRequirementPredicate.create()
         set predicate = this
-        call TriggerAddCondition(trigger, Condition(function thistype.onInvoke))
+        call TriggerAddCondition(triggers[this], Condition(function thistype.onInvoke))
         return this
     endmethod
 
@@ -340,7 +346,7 @@ struct UnitRequirement extends array
         loop
             exitwhen iter == 0
             set condition = iter.data
-            if not TriggerEvaluate(condition.trigger) then
+            if not TriggerEvaluate(triggers[condition]) then
                 return retMessage
             endif
             set iter = iter.next
