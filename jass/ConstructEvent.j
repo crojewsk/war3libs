@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ConstructEvent v2.2.0.0
+*    ConstructEvent v2.2.0.1
 *       by Bannar
 *
 *    Provides complete solution to construction events.
@@ -359,7 +359,7 @@ private function OnDeindex takes nothing returns nothing
     if instances[index] != 0 then
         call PeriodicData(instances[index]).destroy()
     elseif builders[index] != null then
-        if not finished[index] or cancelled[index] then
+        if not (finished[index] or cancelled[index]) then
             call FireEvent(EVENT_UNIT_CONSTRUCTION_INTERRUPT, null, GetIndexedUnit())
         endif
 
