@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    Vector<T> v1.1.8.2
+*    Vector<T> v1.1.8.3
 *       by Bannar
 *
 *    Dynamic contiguous array.
@@ -91,9 +91,6 @@
 *        |
 *        | method erase takes integer pos, integer count returns thistype
 *        |    Erases count elements starting at position pos.
-*        |
-*        | method resize takes integer count returns thistype
-*        |    Resizes the container to contain count elements.
 *
 *
 *****************************************************************************/
@@ -111,18 +108,18 @@ $ACCESS$ struct $NAME$ extends array
         return parent[index]
     endmethod
 
+    static method create takes nothing returns thistype
+        local thistype this = IntegerVector.create()
+        set parent = this
+        return this
+    endmethod
+
     method front takes nothing returns $TYPE$
         return parent.front()
     endmethod
 
     method back takes nothing returns $TYPE$
         return parent.back()
-    endmethod
-
-    static method create takes nothing returns thistype
-        local thistype this = IntegerVector.create()
-        set parent = this
-        return this
     endmethod
 endstruct
 
@@ -234,7 +231,6 @@ $ACCESS$ struct $NAME$ extends array
 
     static method operator [] takes thistype other returns thistype
         local thistype instance = create()
-
         loop
             exitwhen instance.size() >= other.size()
             call instance.push(other[instance.size()])
@@ -246,7 +242,6 @@ $ACCESS$ struct $NAME$ extends array
     method assign takes integer count, $TYPE$ value returns thistype
         if count > 0 then
             call clear()
-
             loop
                 exitwhen length >= count
                 call push(value)
@@ -259,61 +254,43 @@ $ACCESS$ struct $NAME$ extends array
     method insert takes integer pos, integer count, $TYPE$ value returns thistype
         local integer i
 
-        if assert_range(pos, "insert") then
-            if count > 0 then
-                set length = length + count
+        if assert_range(pos, "insert") and count > 0 then
+            set length = length + count
+            set i = length - 1
+            loop
+                exitwhen i < (pos + count)
+                call seT(i, get(i-count))
+                set i = i - 1
+            endloop
 
-                set i = length - 1
-                loop
-                    exitwhen i < (pos + count)
-                    call seT(i, get(i-count))
-                    set i = i - 1
-                endloop
-
-                set i = 0
-                loop
-                    exitwhen i >= count
-                    call seT(pos+i, value)
-                    set i = i + 1
-                endloop
-            endif
+            set i = 0
+            loop
+                exitwhen i >= count
+                call seT(pos+i, value)
+                set i = i + 1
+            endloop
         endif
 
         return this
     endmethod
 
     method erase takes integer pos, integer count returns thistype
-        if assert_pos(pos, "erase") then
-            if count > 0 then
-                if ( pos + count > length ) then
-                    set count = length - pos
-                endif
-
-                set pos = pos + count
-                loop
-                    exitwhen pos >= length
-                    call seT(pos-count, get(pos))
-                    set pos = pos + 1
-                endloop
-
-                loop
-                    exitwhen count <= 0
-                    call pop()
-                    set count = count - 1
-                endloop
+        if assert_pos(pos, "erase") and count > 0 then
+            if ( pos + count > length ) then
+                set count = length - pos
             endif
-        endif
 
-        return this
-    endmethod
-
-    method resize takes integer count returns thistype
-        if count > length then
-            set length = count
-        elseif count >= 0 then
+            set pos = pos + count
             loop
-                exitwhen length <= count
+                exitwhen pos >= length
+                call seT(pos-count, get(pos))
+                set pos = pos + 1
+            endloop
+
+            loop
+                exitwhen count <= 0
                 call pop()
+                set count = count - 1
             endloop
         endif
 
