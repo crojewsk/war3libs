@@ -565,7 +565,7 @@ endif
         local integer idx
         local RecipeIngredientVector resultIngredients = RecipeIngredientVector.create()
         local RecipeIngredientListItem iter = ingredients.first
-        call resultIngredients.resize(items.size())
+        call resultIngredients.assign(items.size(), 0)
 
         loop
             exitwhen iter == 0
@@ -619,7 +619,7 @@ endif
         local integer charges
         local RecipeIngredientVector resultIngredients = RecipeIngredientVector.create()
         local RecipeIngredientListItem iter = ingredients.first
-        call resultIngredients.resize(size)
+        call resultIngredients.assign(size, 0)
 
         loop
             exitwhen iter == 0
