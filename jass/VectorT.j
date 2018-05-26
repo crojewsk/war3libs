@@ -100,7 +100,6 @@ library VectorT requires Table, Alloc
 //! runtextmacro DEFINE_VECTOR("", "IntegerVector", "integer")
 
 //! textmacro_once DEFINE_STRUCT_VECTOR takes ACCESS, NAME, TYPE
-
 $ACCESS$ struct $NAME$ extends array
     private delegate IntegerVector parent
 
@@ -122,11 +121,9 @@ $ACCESS$ struct $NAME$ extends array
         return parent.back()
     endmethod
 endstruct
-
 //! endtextmacro
 
 //! textmacro_once DEFINE_VECTOR takes ACCESS, NAME, TYPE
-
 $ACCESS$ struct $NAME$ extends array
     private Table table
     private integer length
@@ -297,7 +294,6 @@ $ACCESS$ struct $NAME$ extends array
         return this
     endmethod
 endstruct
-
 //! endtextmacro
 
 endlibrary
