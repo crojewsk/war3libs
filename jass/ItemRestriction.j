@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRestriction v1.1.1.3
+*    ItemRestriction v1.1.1.4
 *       by Bannar
 *
 *    For restricting or limiting items from being equipped.
@@ -14,6 +14,9 @@
 *
 *       RegisterPlayerUnitEvent by Bannar
 *          hiveworkshop.com/threads/snippet-registerevent-pack.250266/
+*
+*       UnitDex by TriggerHappy
+*          hiveworkshop.com/threads/system-unitdex-unit-indexer.248209/
 *
 *
 *    Optional requirement:
@@ -186,6 +189,7 @@
 library ItemRestriction requires /*
                         */ ListT /*
                         */ RegisterPlayerUnitEvent /*
+                        */ UnitDex /*
                         */ optional SimError
 
 private function GetUnitTypeErrorMessage takes UnitRequirement requirement, integer unitId returns string

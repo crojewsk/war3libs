@@ -72,7 +72,7 @@ globals
     integer EVENT_UNIT_CONSTRUCTION_INTERRUPT
 endglobals
 
-native UnitAlive takes unit id returns boolean
+native UnitAlive takes unit whichUnit returns boolean
 
 globals
     private IntegerList ongoing = 0

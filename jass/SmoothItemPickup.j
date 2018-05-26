@@ -80,7 +80,7 @@ globals
     integer EVENT_ITEM_SMOOTH_PICKUP
 endglobals
 
-native UnitAlive takes unit u returns boolean
+native UnitAlive takes unit whichUnit returns boolean
 
 globals
     private IntegerList conditions = 0
