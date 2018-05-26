@@ -1,5 +1,5 @@
 /*
-*  ItemRestriction v1.1.1.2
+*  ItemRestriction v1.1.1.3
 *     by Bannar
 *
 *  For restricting or limiting items from being equipped.
@@ -62,13 +62,14 @@ public class UnitRequirement
         this.name = name
         conditions = new LinkedList<UnitRequirementPredicate>()
     
-    construct()
+    construct(string name)
         typeIds = new LinkedList<int>()
         level = 0
         strength = 0
         agility = 0
         intelligence = 0
         includeBonuses = false
+        this.name = name
         conditions = new LinkedList<UnitRequirementPredicate>()
     
     ondestroy
