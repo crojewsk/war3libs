@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRestriction v1.1.1.4
+*    ItemRestriction v1.1.1.5
 *       by Bannar
 *
 *    For restricting or limiting items from being equipped.
@@ -53,7 +53,7 @@
 *        |         return "This unit does not meet requirement criteria"
 *        |     endmethod
 *        |
-*        |     implement SmoothPickupPredicateModule
+*        |     implement UnitRequirementPredicateModule
 *        | endstruct
 *
 ******************************************************************************
@@ -62,7 +62,7 @@
 *
 *       Fields:
 *
-*        | IntegerList typeIds
+*        | IntegerList units
 *        |    Unit type requirement, omitted if empty.
 *        |
 *        | integer level
@@ -118,7 +118,7 @@
 *
 *       Fields:
 *
-*        | IntegerList typeIds
+*        | IntegerList items
 *        |    Item types that enforce this restriction.
 *        |
 *        | integer limit
@@ -271,7 +271,7 @@ module UnitRequirementPredicateModule
 endmodule
 
 struct UnitRequirement extends array
-    readonly IntegerList typeIds
+    readonly IntegerList units
     integer level
     integer strength
     integer agility
@@ -285,7 +285,7 @@ struct UnitRequirement extends array
     static method create takes string name returns thistype
         local thistype this = allocate()
 
-        set typeIds = IntegerList.create()
+        set units = IntegerList.create()
         set level = 0
         set strength = 0
         set agility = 0
@@ -299,13 +299,13 @@ struct UnitRequirement extends array
 
     method destroy takes nothing returns nothing
         set name = null
-        call typeIds.destroy()
+        call units.destroy()
         call conditions.destroy()
         call deallocate()
     endmethod
 
     method has takes integer unitTypeId returns boolean
-        return typeIds.find(unitTypeId) != 0
+        return units.find(unitTypeId) != 0
     endmethod
 
     method requireStat takes integer str, integer agi, integer intel returns thistype
@@ -333,7 +333,7 @@ struct UnitRequirement extends array
         local IntegerListItem iter
         local UnitRequirementPredicate condition
 
-        if not typeIds.empty() and not has(unitTypeId) then
+        if not units.empty() and not has(unitTypeId) then
             return GetUnitTypeErrorMessage(this, unitTypeId)
         elseif level > 0 and GetHeroLevel(whichUnit) < level then
             return GetLevelErrorMessage(this, level)
@@ -405,7 +405,7 @@ endstruct
 
 struct ItemRestriction extends array
     private Table cache
-    readonly IntegerList typeIds
+    readonly IntegerList items
     integer limit
     readonly LimitExceptionList exceptions
     readonly ItemRestrictionList exclusives
@@ -418,7 +418,7 @@ struct ItemRestriction extends array
         local thistype this = allocate()
 
         set cache = Table.create()
-        set typeIds = IntegerList.create()
+        set items = IntegerList.create()
         set exceptions = LimitExceptionList.create()
         set exclusives = ItemRestrictionList.create()
         set this.name = name
@@ -436,7 +436,7 @@ struct ItemRestriction extends array
         local ItemRestrictionListItem node
         local ItemRestriction exclusive
 
-        set iter = typeIds.first
+        set iter = items.first
         loop
             exitwhen iter == 0
             set restrictions = restrictionTable[iter.data]
@@ -465,7 +465,7 @@ struct ItemRestriction extends array
         endif
 
         call cache.destroy()
-        call typeIds.destroy()
+        call items.destroy()
         call exceptions.destroy()
         call exclusives.destroy()
         set name = null
@@ -474,7 +474,7 @@ struct ItemRestriction extends array
     endmethod
 
     method has takes integer itemTypeId returns boolean
-        return typeIds.find(itemTypeId) != 0
+        return items.find(itemTypeId) != 0
     endmethod
 
     method removeItem takes integer itemTypeId returns thistype
@@ -482,7 +482,7 @@ struct ItemRestriction extends array
         local ItemRestrictionListItem node
 
         if has(itemTypeId) then
-            call typeIds.erase(typeIds.find(itemTypeId))
+            call items.erase(items.find(itemTypeId))
 
             set restrictions = restrictionTable[itemTypeId]
             set node = restrictions.find(this)
@@ -504,7 +504,7 @@ struct ItemRestriction extends array
         endif
 
         if not has(itemTypeId) then
-            call typeIds.push(itemTypeId)
+            call items.push(itemTypeId)
 
             if not restrictionTable.has(itemTypeId) then
                 set restrictions = ItemRestrictionList.create()
