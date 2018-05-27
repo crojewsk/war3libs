@@ -1,5 +1,5 @@
 /*
-*  StackNSplit v1.1.1.3
+*  StackNSplit v1.1.1.4
 *     by Bannar
 *
 *  Easy item charges stacking and splitting.
@@ -50,7 +50,7 @@ public function registerItemStackingEvent(int whichEvent, code cb)
 
 /** Returns value indicating whether specifed item is stackable or not. */
 public function isItemContainer(int containerType) returns boolean
-    return table.hasBoolean(3, containerType)
+    return table.hasInt(3, containerType)
 
 /** Returns maximum number of charges for specified container. */
 public function getItemContainerMaxStacks(int containerType) returns int
@@ -94,7 +94,7 @@ public function getItemSplitCount(int elementType) returns int
 
 /** Indicates if specifed element type has container assigned to it. */
 public function itemHasContainer(int elementType) returns boolean
-    return table.hasBoolean(2, elementType)
+    return table.hasInt(2, elementType)
 
 /** Returns list of item types assigned to specified element as its containers. */
 public function getItemContainers(int elementType) returns LinkedList<int>

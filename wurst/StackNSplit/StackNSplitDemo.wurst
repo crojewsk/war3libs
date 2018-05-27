@@ -25,4 +25,9 @@ function createAllItems()
     CreateItem('tfar', - 694.6, - 140.7)
 
 public function initStackNSplitDemo()
+    createAllItems()
+
     makeItemStackable('phea', 10, 2)
+    setItemContainer('phea', 'hslv', 20, 5, 0)
+    makeItemStackable('tfar', 2, 1)
+    setItemContainer('tfar', 'tcas', 7, 1, 1)

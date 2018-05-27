@@ -31,7 +31,7 @@ public function getInventorySlotTo() returns int
     return eventSlotTo
 
 public function getInventorySwappedItem() returns item
-    return UnitItemInSlot(eventUnit, eventSlotTo)
+    return eventUnit.itemInSlot(eventSlotTo)
 
 public function registerInventoryEvent(int whichEvent, code cb)
     if whichEvent == EVENT_ITEM_INVENTORY_MOVE
