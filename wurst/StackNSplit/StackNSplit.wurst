@@ -1,5 +1,5 @@
 /*
-*  StackNSplit v1.1.1.4
+*  StackNSplit v1.1.1.5
 *     by Bannar
 *
 *  Easy item charges stacking and splitting.
@@ -352,10 +352,11 @@ function onPickup()
 function onMoved()
     unit u = getInventoryManipulatingUnit()
     item itm = getInventoryManipulatedItem()
+    int slotFrom = getInventorySlotFrom()
     int itemTypeId = itm.getTypeId()
     int max = 0
 
-    if getInventorySlotFrom() == getInventorySlotTo() // splitting
+    if slotFrom == getInventorySlotTo() // splitting
         u.splitItem(itm)
     else if not isItemContainer(itemTypeId)
         int charges = itm.getCharges()
@@ -373,11 +374,21 @@ function onMoved()
             int total = charges + swappedCharges
             if total > max
                 if swappedCharges < max // if not met, allow for standard replacement action
+                    trigger t = getPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_DROP_ITEM)
+                    t.disable()
+                    itm.remove() // Remove the item to prevent item swap from occurring
+                    t.enable()
+                    t = getPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_PICKUP_ITEM)
+                    t.disable()
+                    u.addItemToSlot(itemTypeId, slotFrom) // Create and add new item replacing removed one
+                    t.enable()
+
+                    itm = u.itemInSlot(slotFrom)
+                    itm.setCharges(total - max)
+                    swapped.setCharges(max)
                     int diff = max - charges
-                    itm.setCharges(max)
-                    swapped.setCharges(total - max)
-                    fireEvent(eventRemovedTrigger, u, swapped, diff)
-                    fireEvent(eventAddedTrigger, u, itm, diff)
+                    fireEvent(eventRemovedTrigger, u, itm, diff)
+                    fireEvent(eventAddedTrigger, u, swapped, diff)
             else
                 swapped.setCharges(total)
                 itm.remove()

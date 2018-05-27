@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.2.0
+*    StackNSplit v1.1.2.1
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -569,6 +569,7 @@ endfunction
 private function OnMoved takes nothing returns nothing
     local unit u = GetInventoryManipulatingUnit()
     local item itm = GetInventoryManipulatedItem()
+    local integer slotFrom = GetInventorySlotFrom()
     local integer itemTypeId = GetItemTypeId(itm)
     local integer charges
     local item swapped
@@ -577,8 +578,9 @@ private function OnMoved takes nothing returns nothing
     local integer max = 0
     local integer total
     local integer diff
+    local trigger t
 
-    if GetInventorySlotFrom() == GetInventorySlotTo() then // splitting
+    if slotFrom == GetInventorySlotTo() then // splitting
         call UnitSplitItem(u, itm)
     elseif not IsItemContainer(itemTypeId) then
         set charges = GetItemCharges(itm)
@@ -598,11 +600,22 @@ private function OnMoved takes nothing returns nothing
             set total = charges + swappedCharges
             if total > max then
                 if swappedCharges < max then // if not met, allow for standard replacement action
+                    set t = GetAnyPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_DROP_ITEM)
+                    call DisableTrigger(t)
+                    call RemoveItem(itm) // Remove the item to prevent item swap from occurring
+                    call EnableTrigger(t)
+                    set t = GetAnyPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_PICKUP_ITEM)
+                    call DisableTrigger(t)
+                    call UnitAddItemToSlotById(u, itemTypeId, slotFrom) // Create and add new item replacing removed one
+                    call EnableTrigger(t)
+                    set t = null
+
+                    set itm = UnitItemInSlot(u, slotFrom)
+                    call SetItemCharges(itm, total - max)
+                    call SetItemCharges(swapped, max)
                     set diff = max - charges
-                    call SetItemCharges(itm, max)
-                    call SetItemCharges(swapped, total - max)
-                    call FireEvent(EVENT_ITEM_CHARGES_REMOVED, u, swapped, diff)
-                    call FireEvent(EVENT_ITEM_CHARGES_ADDED, u, itm, diff)
+                    call FireEvent(EVENT_ITEM_CHARGES_REMOVED, u, itm, diff)
+                    call FireEvent(EVENT_ITEM_CHARGES_ADDED, u, swapped, diff)
                 endif
             else
                 call SetItemCharges(swapped, total)
