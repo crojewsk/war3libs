@@ -37,7 +37,7 @@ public interface UnitRequirementPredicate
 /** Set of unit-specific requirements. */ 
 public class UnitRequirement
     /** Unit type requirement. Omitted if empty. */
-    LinkedList<int> typeIds
+    LinkedList<int> units
     /** Unit level requirement. */
     int level
     /** Hero strength requirement. */
@@ -53,7 +53,7 @@ public class UnitRequirement
     private LinkedList<UnitRequirementPredicate> conditions
 
     construct(string name, int lvl, int str, int agi, int intel, bool includeBonuses)
-        typeIds = new LinkedList<int>()
+        units = new LinkedList<int>()
         level = lvl
         strength = str
         agility = agi
@@ -63,7 +63,7 @@ public class UnitRequirement
         conditions = new LinkedList<UnitRequirementPredicate>()
     
     construct(string name)
-        typeIds = new LinkedList<int>()
+        units = new LinkedList<int>()
         level = 0
         strength = 0
         agility = 0
@@ -73,12 +73,12 @@ public class UnitRequirement
         conditions = new LinkedList<UnitRequirementPredicate>()
     
     ondestroy
-        destroy typeIds
+        destroy units
         destroy conditions
 
     /** Whether specified unit type is a part of requirement. */
     function has(int unitTypeId) returns boolean
-        return typeIds.contains(unitTypeId)
+        return units.contains(unitTypeId)
 
     /** Sets hero statistic requirements to specified values. */
     function requireStat(int str, int agi, int intel)
@@ -103,7 +103,7 @@ public class UnitRequirement
         int unitTypeId = whichUnit.getTypeId()
         string errorMessage
 
-        if not typeIds.isEmpty() and not has(unitTypeId)
+        if not units.isEmpty() and not has(unitTypeId)
             return getUnitTypeErrorMessage(this, unitTypeId)
         if level > 0 and whichUnit.getLevel() < level
             return getLevelErrorMessage(this, level)
@@ -140,7 +140,7 @@ public class ItemRestriction
     //  unit.-index: currently chosen exception from the exception list
     protected Table cache
     /** Item types that enforce this restriction. */
-    LinkedList<int> typeIds
+    LinkedList<int> items
     /** Maximum number of items a unit can carry. */
     int limit
     /** Collection of UnitRequirement instances that may define different limits.
@@ -156,7 +156,7 @@ public class ItemRestriction
 
     construct(string name, int limit, UnitRequirement requirement)
         cache = new Table()
-        typeIds = new LinkedList<int>()
+        items = new LinkedList<int>()
         exceptions = new LinkedList<LimitException>()
         exclusives = new LinkedList<ItemRestriction>()
         this.name = name
@@ -167,7 +167,7 @@ public class ItemRestriction
     
     construct(string name, int limit)
         cache = new Table()
-        typeIds = new LinkedList<int>()
+        items = new LinkedList<int>()
         exceptions = new LinkedList<LimitException>()
         exclusives = new LinkedList<ItemRestriction>()
         this.name = name
@@ -179,7 +179,7 @@ public class ItemRestriction
     ondestroy
         LinkedList<ItemRestriction> restrictions
 
-        for itemTypeId in typeIds
+        for itemTypeId in items
             restrictions = restrictionsMap.get(itemTypeId)
             restrictions.remove(this)
             if restrictions.isEmpty()
@@ -194,7 +194,7 @@ public class ItemRestriction
                 exclusive.exclusives.remove(this)
         
         destroy cache
-        destroy typeIds
+        destroy items
         destroy exceptions
         destroy exclusives
         this.name = null
@@ -202,14 +202,14 @@ public class ItemRestriction
     
     /** Whether specified item type is a part of restriction. */
     function has(int itemTypeId) returns boolean
-        return typeIds.contains(itemTypeId)
+        return items.contains(itemTypeId)
 
     /** Remove specified item type from this restriction. */
     function removeItem(int itemTypeId)
         LinkedList<ItemRestriction> restrictions
 
         if has(itemTypeId)
-            typeIds.remove(itemTypeId)
+            items.remove(itemTypeId)
             restrictions = restrictionsMap.get(itemTypeId)
             restrictions.remove(this)
             if restrictions.isEmpty()
@@ -224,7 +224,7 @@ public class ItemRestriction
             return
 
         if not has(itemTypeId)
-            typeIds.push(itemTypeId)
+            items.push(itemTypeId)
 
             if not restrictionsMap.has(itemTypeId)
                 restrictions = new LinkedList<ItemRestriction>()
