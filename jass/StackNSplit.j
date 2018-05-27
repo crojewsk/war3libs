@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.1.9
+*    StackNSplit v1.1.2.0
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -69,6 +69,18 @@
 *
 *    Functions:
 *
+*       function IsUnitItemFullyStacked takes unit whichUnit, integer itemTypeId returns boolean
+*          Checks if specified unit has hold any additional charges of provided item.
+*
+*       function UnitStackItem takes unit whichUnit, item whichItem returns boolean
+*          Attempts to stack provided item for specified unit.
+*
+*       function UnitSplitItem takes unit whichUnit, item whichItem returns boolean
+*          Attempts to split provided item for specified unit.
+*
+*
+*    Functions (Container):
+*
 *       function IsItemContainer takes integer containerType returns boolean
 *          Returns value indicating whether specifed item is stackable or not.
 *
@@ -81,8 +93,19 @@
 *       function GetItemContainerItem takes integer containerType returns integer
 *          Returns item type assigned to specified container as its elements.
 *
-*       function IsItemContainerEmptiable takes integer containerType returns boolean
-*          Whether container charges can be lowered down to 0 during split operation.
+*       function GetItemContainerMinCharges takes integer containerType returns integer
+*          Number of charges that container cannot go below during split operation.
+*
+*       function UnsetItemContainer takes integer elementType returns nothing
+*          Unsets any container related data related to specified element item type.
+*
+*       function SetItemContainer takes integer elementType, integer containerType, integer stacks, integer splits, integer minCharges returns boolean
+*          Sets specified containerType item type as container for item type elementType.
+*          Argument minCharges specifies number of charges that container item cannot
+*          go below during split operation.
+*
+*
+*    Functions (Element):
 *
 *       function IsItemStackable takes integer elementType returns boolean
 *          Returns value indicating whether specifed item is stackable or not.
@@ -104,23 +127,6 @@
 *
 *       function MakeItemStackable takes integer elementType, integer stacks, integer splits returns boolean
 *          Registers specified item as stackable.
-*
-*       function UnsetItemContainer takes integer elementType returns nothing
-*          Unsets any container related data related to specified element item type.
-*
-*       function SetItemContainer takes integer elementType, integer containerType, integer stacks, integer splits, boolean emptiable returns boolean
-*          Sets specified containerType item type as container for item type elementType.
-*          If emptiable flags is set to true, container charges can be dropped down to 0
-*          during split operation. Otherwise at least 1 charge will be left.
-*
-*       function IsUnitItemFullyStacked takes unit whichUnit, integer itemTypeId returns boolean
-*          Checks if specified unit has hold any additional charges of provided item.
-*
-*       function UnitStackItem takes unit whichUnit, item whichItem returns boolean
-*          Attempts to stack provided item for specified unit.
-*
-*       function UnitSplitItem takes unit whichUnit, item whichItem returns boolean
-*          Attempts to split provided item for specified unit.
 *
 *****************************************************************************/
 library StackNSplit requires /*
@@ -161,14 +167,14 @@ function GetItemContainerMaxStacks takes integer containerType returns integer
     if IsItemContainer(containerType) then
         return table[0][containerType]
     endif
-    return 0
+    return -1
 endfunction
 
 function GetItemContainerSplitCount takes integer containerType returns integer
     if IsItemContainer(containerType) then
         return table[1][containerType]
     endif
-    return 0
+    return -1
 endfunction
 
 function GetItemContainerItem takes integer containerType returns integer
@@ -178,11 +184,11 @@ function GetItemContainerItem takes integer containerType returns integer
     return 0
 endfunction
 
-function IsItemContainerEmptiable takes integer containerType returns boolean
+function GetItemContainerMinCharges takes integer containerType returns integer
     if IsItemContainer(containerType) then
-        return table[4].boolean[containerType]
+        return table[4][containerType]
     endif
-    return false
+    return -1
 endfunction
 
 function IsItemStackable takes integer elementType returns boolean
@@ -193,14 +199,14 @@ function GetItemMaxStacks takes integer elementType returns integer
     if IsItemStackable(elementType) then
         return table[0][elementType]
     endif
-    return 0
+    return -1
 endfunction
 
 function GetItemSplitCount takes integer elementType returns integer
     if IsItemStackable(elementType) then
         return table[1][elementType]
     endif
-    return 0
+    return -1
 endfunction
 
 function ItemHasContainer takes integer elementType returns boolean
@@ -243,7 +249,7 @@ function UnsetItemContainer takes integer containerType returns nothing
         call table[0].remove(containerType)
         call table[1].remove(containerType)
         call table[3].remove(containerType)
-        call table[4].boolean.remove(containerType)
+        call table[4].remove(containerType)
 
         // Remove containerType from containers list
         set containers = GetItemContainers(elementType)
@@ -255,7 +261,7 @@ function UnsetItemContainer takes integer containerType returns nothing
     endif
 endfunction
 
-function SetItemContainer takes integer elementType, integer containerType, integer stacks, integer splits, boolean emptiable returns boolean
+function SetItemContainer takes integer elementType, integer containerType, integer stacks, integer splits, integer minCharges returns boolean
     local IntegerList containers
 
     if elementType == 0 or containerType == 0 then
@@ -271,6 +277,9 @@ function SetItemContainer takes integer elementType, integer containerType, inte
     if splits < 1 then
         set splits = 1
     endif
+    if minCharges < 0 then
+        set minCharges = 0
+    endif
 
     set containers = GetItemContainers(elementType)
     if containers == 0 then
@@ -282,7 +291,7 @@ function SetItemContainer takes integer elementType, integer containerType, inte
     set table[0][containerType] = stacks
     set table[1][containerType] = splits
     set table[3][containerType] = elementType
-    set table[4].boolean[containerType] = emptiable
+    set table[4][containerType] = minCharges
     return true
 endfunction
 
@@ -456,9 +465,7 @@ function UnitSplitItem takes unit whichUnit, item whichItem returns boolean
     local integer minCharges = 1
 
     if IsItemContainer(itemTypeId) then
-        if IsItemContainerEmptiable(itemTypeId) then
-            set minCharges = 0
-        endif
+        set minCharges = GetItemContainerMinCharges(itemTypeId)
         if charges <= minCharges then
             return false
         endif
