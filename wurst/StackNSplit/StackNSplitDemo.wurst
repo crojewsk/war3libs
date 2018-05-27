@@ -1,0 +1,28 @@
+package StackNSplitDemo
+import StackNSplit
+
+function createAllItems()
+    CreateItem('hslv', - 150.9, 367.1)
+    CreateItem('hslv', - 207.9, 267.3)
+    CreateItem('hslv', - 262.7, 367.5)
+    CreateItem('phea', - 55.3, 108.0).setCharges(3)
+    CreateItem('phea', - 138.6, 107.1).setCharges(3)
+    CreateItem('phea', - 236.8, 96.9).setCharges(3)
+    CreateItem('phea', - 324.2, 93.8).setCharges(3)
+    CreateItem('phea', - 59.8, 23.2).setCharges(3)
+    CreateItem('phea', - 135.4, 27.6).setCharges(3)
+    CreateItem('phea', - 226.7, 17.6).setCharges(3)
+    CreateItem('phea', - 311.4, 10.7).setCharges(3)
+    CreateItem('tcas', - 938.9, - 54.9)
+    CreateItem('tcas', - 937.4, 63.4)
+    CreateItem('tfar', - 794.6, 157.8)
+    CreateItem('tfar', - 796.7, 57.9)
+    CreateItem('tfar', - 798.0, - 39.2)
+    CreateItem('tfar', - 799.0, - 140.1)
+    CreateItem('tfar', - 703.2, 173.7)
+    CreateItem('tfar', - 703.0, 67.6)
+    CreateItem('tfar', - 695.6, - 33.0)
+    CreateItem('tfar', - 694.6, - 140.7)
+
+public function initStackNSplitDemo()
+    makeItemStackable('phea', 10, 2)

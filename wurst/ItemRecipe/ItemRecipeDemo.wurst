@@ -1,0 +1,89 @@
+package ItemRecipeDemo
+import ItemRecipe
+import ItemRestriction
+
+class NoTrollsAlive implements UnitRequirementPredicate
+    static function filter() returns boolean
+        return GetFilterUnit().getTypeId() == 'ndtb' and GetFilterUnit().isAlive() // Spitting Spider
+
+    function isMet(unit _whichUnit) returns string
+        group g = CreateGroup()
+        string result = null
+
+        g.enumUnitsInRect(bj_mapInitialPlayableArea, Filter(function filter))
+        if g.hasNext()
+            result = "There are still some trolls alive on the map. Kill them first."
+
+        g.destr()
+        return result
+
+function createAllItems()
+    CreateItem('bzbe', 134.4, - 69.5)
+    CreateItem('ches', - 243.8, 268.7)
+    CreateItem('ches', - 358.4, 273.3)
+    CreateItem('ches', - 101.7, 273.9)
+    CreateItem('gopr', 131.9, 36.3)
+    CreateItem('hcun', - 885.0, 132.7)
+    CreateItem('hcun', - 883.7, 4.3)
+    CreateItem('hval', - 750.3, 12.5)
+    CreateItem('hval', - 753.3, 145.7)
+    CreateItem('kybl', - 307.5, 496.9)
+    CreateItem('kybl', - 305.3, 384.8)
+    CreateItem('kygh', - 169.4, 372.5)
+    CreateItem('kygh', - 167.6, 506.7)
+    CreateItem('kymn', - 435.0, 387.8)
+    CreateItem('kymn', - 436.4, 497.3)
+    CreateItem('kysn', - 30.2, 496.8)
+    CreateItem('kysn', - 37.3, 371.8)
+    CreateItem('mcou', - 1003.8, 131.5)
+    CreateItem('mcou', - 1008.5, - 4.4)
+    CreateItem('ocor', - 483.0, - 93.2)
+    CreateItem('ofir', - 375.6, - 83.2)
+    CreateItem('oli2', - 488.8, 11.0)
+    CreateItem('oven', - 374.0, 21.0)
+    CreateItem('wcyc', - 115.4, 56.1)
+    CreateItem('wlsd', - 112.1, - 71.3)
+    CreateItem('woms', 12.4, - 80.6)
+    CreateItem('wshs', 13.3, 46.5)
+
+public function initItemRecipeDemo()
+    createAllItems()
+
+    var noTrollsAlive = new UnitRequirement("No trolls alive")
+    noTrollsAlive.addCondition(new NoTrollsAlive())
+
+    var magicKeyChain = new ItemRecipe('mgtk', 0, false, true, true)
+    magicKeyChain.addItem('kybl')
+    magicKeyChain.addItem('kygh')
+
+    var critter = new ItemRecipe('mcri', 2, false, true, true)
+    critter..startBatch()
+        ..addItem('kybl')
+        ..addItem('kygh')
+        ..addItem('kymn')
+        ..addItem('kysn')
+    critter.endBatch()
+    critter.addItem('ches', false, 0) // Cheese is just a catalyst
+
+    var crown = new ItemRecipe('ckng', 0, true, false, true)
+    crown.addItem('hval')
+    crown.addItem('hcun')
+    crown.addItem('mcou')
+    crown.requirement = noTrollsAlive
+
+    var shadowOrb = new ItemRecipe('sora', 0, false, true, false)
+    shadowOrb.addItem('oli2')
+    shadowOrb.addItem('ofir')
+    shadowOrb.addItem('oven')
+    shadowOrb.addItem('ocor')
+    shadowOrb.setAbility('AHtc')
+
+    var fullVial = new ItemRecipe('bzbf', 0, false, true, true)
+    fullVial.addItem('bzbe')
+    fullVial.addItem('wlsd')
+    fullVial.addItem('woms')
+    fullVial.addItem('wshs')
+    fullVial.addItem('wcyc')
+    fullVial.addItem('gopr', false, 0) // Glyph of Purification is just a catalyst
+
+    print("ItemRecipe system by Bannar.\nPowerful item recipe creator.")

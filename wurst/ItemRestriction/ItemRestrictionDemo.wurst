@@ -1,0 +1,55 @@
+package ItemRestrictionDemo
+import ItemRestriction
+
+class AtLeastOneSpiderAlive implements UnitRequirementPredicate
+    static function filter() returns boolean
+        return GetFilterUnit().getTypeId() == 'nssp' and GetFilterUnit().isAlive() // Spitting Spider
+
+    function isMet(unit _whichUnit) returns string
+        group g = CreateGroup()
+        string result = null
+
+        g.enumUnitsInRect(bj_mapInitialPlayableArea, Filter(function filter))
+        if not g.hasNext()
+            result = "There are no spider alive on the map. Spare a few."
+
+        g.destr()
+        return result
+
+function createAllItems()
+    CreateItem('desc', - 254.5, 325.1)
+    CreateItem('desc', - 145.3, 328.8)
+    CreateItem('desc', - 145.9, 224.0)
+    CreateItem('desc', - 255.3, 221.0)
+    CreateItem('mlst', - 533.7, - 124.3)
+    CreateItem('mlst', - 533.1, - 15.6)
+    CreateItem('mlst', - 634.2, - 24.8)
+    CreateItem('mlst', - 637.4, - 136.9)
+    CreateItem('sprn', - 291.9, 11.3)
+
+public function initItemRestrictionDemo()
+    createAllItems()
+
+    var weapon1h = new ItemRestriction("1H-weapon", 2)
+    var weapon2h = new ItemRestriction("2H-weapon", 1)
+    var tauren = new UnitRequirement("tauren")
+    var spiderRing = new ItemRestriction("Friend of the spiders", 1)
+    var atLeastOneSpiderAlive = new UnitRequirement("Spare the spiders")
+
+    spiderRing.addItem('sprn')
+    atLeastOneSpiderAlive.addCondition(new AtLeastOneSpiderAlive())
+    spiderRing.requirement = atLeastOneSpiderAlive
+
+    tauren.typeIds.push('Otch')
+    weapon1h.addItem('desc')
+    weapon2h.addItem('mlst')
+    weapon2h.addExclusive(weapon1h)
+    weapon2h.addException(tauren, 2)
+
+    print("ItemRestriction system by Bannar.\n" +
+        "For restricting or limiting items from being equipped.\n\n" +
+        "Heroes are limited to two 1H weapons.\n" +
+        "Heroes are limited to one 2H weapon.\n" +
+        "Tauren Chieftain is an exception, he can hold up to two 2H weapons.\n" +
+        "1H weapons and 2H weapons exclude ech other.\n" +
+        "Spider Ring can only be picked up if at least one spider is alive on the map.\n\n")

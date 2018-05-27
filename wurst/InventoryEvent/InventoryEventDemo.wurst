@@ -1,5 +1,6 @@
-package InventoryEventTest
+package InventoryEventDemo
 import InventoryEvent
+import ClosureTimers
 
 function onInventoryMove()
     unit u = getInventoryManipulatingUnit()
@@ -15,7 +16,6 @@ function onInventoryMove()
     else
         s = u.getName() + " moved " + itm.getName() + "[" + slotFrom.toString() + "] to slot " + slotTo.toString()
 
-    ClearTextMessages()
     print(s)
 
 function onInventoryUse()
@@ -25,27 +25,15 @@ function onInventoryUse()
     string s
 
     s = u.getName() + " used " + itm.getName() + "[" + slotFrom.toString() + "]"
-    ClearTextMessages()
     print(s)
 
-function start()
-    player p = GetLocalPlayer()
-    real x = -200//GetCameraTargetPositionX()
-    real y = -200///GetCameraTargetPositionY()
-
-    // boots
-    CreateItem('bspd', x, y)
-    // crystall ball
-    CreateItem('crys', x, y)
-    // inferno
-    CreateItem('infs', x, y)
-    // claws of attack
-    CreateItem('ratc', x, y)
-
-    CreateUnit(p, 'Hpal', x, y, 0)
-    GetExpiredTimer().destr()
-
-init
+public function initInventoryEventDemo()
     registerInventoryEvent(EVENT_ITEM_INVENTORY_MOVE, () -> onInventoryMove())
     registerInventoryEvent(EVENT_ITEM_INVENTORY_USE, () -> onInventoryUse())
-    CreateTimer().start(1, () -> start())
+    doAfter(1.) ->
+        real x = -200
+        real y = -200
+        CreateItem('bspd', x, y) // Boots
+        CreateItem('crys', x, y) // Crystall Ball
+        CreateItem('infs', x, y) // Inferno
+        CreateItem('ratc', x, y) // Claws of Attack
