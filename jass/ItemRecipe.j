@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.1.1
+*    ItemRecipe v1.1.1.2
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -295,7 +295,7 @@ struct ItemRecipe extends array
     private integer abilityId
     private boolean batch
 static if LIBRARY_ItemRestriction then
-    readonly UnitRequirement requirement
+    UnitRequirement requirement
 endif
 
     implement Alloc
@@ -674,7 +674,7 @@ endif
         if count <= 0 or count > items.size() then
             return 0
         endif
-static if LIRABRY_ItemRestriction then
+static if LIBRARY_ItemRestriction then
         if requirement != 0 and not requirement.filter(whichUnit) then
             return 0
         endif
