@@ -1,7 +1,17 @@
 package StackNSplitDemo
 import StackNSplit
 
+string description = "Potion of Healing stacks up to 10 times and splits for 2.\n" +
+    "Healing Salve is a container for Potion of Healing. Holds up to 20 charges, splits for 5. Can be emptied.\n" +
+    "Tiny Farm stacks up to 2 times and splits for 1.\n" +
+    "Tine Castly is a container for Tiny Farm. Holds up to 7 charges, splits for 1. Has to have at least 1 charge to allow for splitting.\n" +
+    "\nYou can order hero to stack up item charges despite their inventory being full."
+
 function createAllItems()
+    CreateItem('ckng', - 402.8, 548.5)
+    CreateItem('modt', - 521.4, 434.9)
+    CreateItem('ratf', - 524.1, 552.4)
+    CreateItem('rde4', - 404.8, 435.1)
     CreateItem('hslv', - 150.9, 367.1)
     CreateItem('hslv', - 207.9, 267.3)
     CreateItem('hslv', - 262.7, 367.5)
@@ -31,3 +41,5 @@ public function initStackNSplitDemo()
     setItemContainer('phea', 'hslv', 20, 5, 0)
     makeItemStackable('tfar', 2, 1)
     setItemContainer('tfar', 'tcas', 7, 1, 1)
+
+    printTimed(description, 45)

@@ -7,3 +7,4 @@ wurst.dependencies
 wurst_run.args
 scripts/backups
 scripts/logs
+wurst/InitDemos.wurst

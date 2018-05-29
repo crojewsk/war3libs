@@ -17,6 +17,15 @@ class NoTrollsAlive implements UnitRequirementPredicate
         g.destr()
         return result
 
+string description = "1) Blood Key + Ghost Key = Magic Chain Key (ordered, onpickup)\n" +
+    "2) Any key +  Cheese (catalyst) = Mechanical Critter (unordered, onpickup)\n" +
+    "3) Helm of Valor + Hood of Cunning + Medallion of Courage = Crown of Kings\n" +
+    "                (ordered, onpickup, special condition: no trolls alive)\n" +
+    "4) All four Orbs = Shadow Orb (unordered, assembled only via Thunder Clap)\n" +
+    "5) All Wands + Glyph (catalyst) + Empty Vial = Full Vial (unordered, onpickup)\n" +
+    "\nYou can order hero to assemble unordered recipes despite their inventory being full." +
+    " Inventory manipulation e.g. item double click can trigger ordered recipe assembly."
+
 function createAllItems()
     CreateItem('bzbe', 134.4, - 69.5)
     CreateItem('ches', - 243.8, 268.7)
@@ -86,4 +95,4 @@ public function initItemRecipeDemo()
     fullVial.addItem('wcyc')
     fullVial.addItem('gopr', false, 0) // Glyph of Purification is just a catalyst
 
-    print("ItemRecipe system by Bannar.\nPowerful item recipe creator.")
+    printTimed(description, 45)

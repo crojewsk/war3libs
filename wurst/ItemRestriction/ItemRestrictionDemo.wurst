@@ -16,6 +16,12 @@ class AtLeastOneSpiderAlive implements UnitRequirementPredicate
         g.destr()
         return result
 
+string description = "Heroes are limited to two 1H weapons.\n" +
+    "Heroes are limited to one 2H weapon.\n" +
+    "Tauren Chieftain is an exception, he can hold up to two 2H weapons.\n" +
+    "1H weapons and 2H weapons exclude ech other.\n" +
+    "Spider Ring can only be picked up if at least one spider is alive on the map."
+
 function createAllItems()
     CreateItem('desc', - 254.5, 325.1)
     CreateItem('desc', - 145.3, 328.8)
@@ -46,10 +52,4 @@ public function initItemRestrictionDemo()
     weapon2h.addExclusive(weapon1h)
     weapon2h.addException(tauren, 2)
 
-    print("ItemRestriction system by Bannar.\n" +
-        "For restricting or limiting items from being equipped.\n\n" +
-        "Heroes are limited to two 1H weapons.\n" +
-        "Heroes are limited to one 2H weapon.\n" +
-        "Tauren Chieftain is an exception, he can hold up to two 2H weapons.\n" +
-        "1H weapons and 2H weapons exclude ech other.\n" +
-        "Spider Ring can only be picked up if at least one spider is alive on the map.\n\n")
+    printTimed(description, 45)
