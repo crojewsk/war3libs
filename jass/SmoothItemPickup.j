@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.2.0
+*    SmoothItemPickup v1.0.2.1
 *       by Bannar
 *
 *    Allows for item pickup despite unit inventory being full.
@@ -229,7 +229,7 @@ private function OnCallback takes nothing returns nothing
         exitwhen iter == 0
         set data = iter.data
         if not UnitAlive(data.unit) or GetUnitCurrentOrder(data.unit) != 851986 /*
-        */ or data.item == null or IsItemOwned(data.item) then // order move
+        */ or GetItemTypeId(data.item) == 0 or IsItemOwned(data.item) then // order move
             call data.destroy()
         else
             if Test(data.unit, data.item, data.range) then

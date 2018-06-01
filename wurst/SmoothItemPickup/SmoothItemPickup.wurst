@@ -1,5 +1,5 @@
 /*
-*  SmoothItemPickup v1.0.0.7
+*  SmoothItemPickup v1.0.0.8
 *     by Bannar
 *
 *  Allows for item pickup despite unit inventory being full.
@@ -88,7 +88,7 @@ function onCallback()
     while iter.hasNext()
         var data = iter.next()
         if not data.picker.isAlive() or data.picker.getCurrentOrder() != Orders.move
-            or data.itm == null or data.itm.isOwned()
+            or data.itm.getTypeId() == 0 or data.itm.isOwned()
             destroy data
         else
             if test(data.picker, data.itm, data.range)
