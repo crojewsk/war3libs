@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    Vector<T> v1.1.8.3
+*    Vector<T> v1.1.8.4
 *       by Bannar
 *
 *    Dynamic contiguous array.
@@ -19,9 +19,9 @@
 *
 *    Implementation:
 *
-*       macro DEFINE_STRUCT_VECTOR takes ACCESS, NAME, TYPE
-*
 *       macro DEFINE_VECTOR takes ACCESS, NAME, TYPE
+*
+*       macro DEFINE_STRUCT_VECTOR takes ACCESS, NAME, TYPE
 *
 *          ACCESS - encapsulation, choose restriction access
 *            NAME - name of vector type
@@ -96,32 +96,8 @@
 *****************************************************************************/
 library VectorT requires Table, Alloc
 
-// Run here any global vector types you want to be defined.
 //! runtextmacro DEFINE_VECTOR("", "IntegerVector", "integer")
-
-//! textmacro_once DEFINE_STRUCT_VECTOR takes ACCESS, NAME, TYPE
-$ACCESS$ struct $NAME$ extends array
-    private delegate IntegerVector parent
-
-    method operator[] takes integer index returns $TYPE$
-        return parent[index]
-    endmethod
-
-    static method create takes nothing returns thistype
-        local thistype this = IntegerVector.create()
-        set parent = this
-        return this
-    endmethod
-
-    method front takes nothing returns $TYPE$
-        return parent.front()
-    endmethod
-
-    method back takes nothing returns $TYPE$
-        return parent.back()
-    endmethod
-endstruct
-//! endtextmacro
+// Run here any global vector types you want to be defined.
 
 //! textmacro_once DEFINE_VECTOR takes ACCESS, NAME, TYPE
 $ACCESS$ struct $NAME$ extends array
@@ -292,6 +268,30 @@ $ACCESS$ struct $NAME$ extends array
         endif
 
         return this
+    endmethod
+endstruct
+//! endtextmacro
+
+//! textmacro_once DEFINE_STRUCT_VECTOR takes ACCESS, NAME, TYPE
+$ACCESS$ struct $NAME$ extends array
+    private delegate IntegerVector parent
+
+    method operator[] takes integer index returns $TYPE$
+        return parent[index]
+    endmethod
+
+    static method create takes nothing returns thistype
+        local thistype this = IntegerVector.create()
+        set parent = this
+        return this
+    endmethod
+
+    method front takes nothing returns $TYPE$
+        return parent.front()
+    endmethod
+
+    method back takes nothing returns $TYPE$
+        return parent.back()
     endmethod
 endstruct
 //! endtextmacro

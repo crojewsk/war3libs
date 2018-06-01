@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    List<T> v2.1.2.2
+*    List<T> v2.1.2.3
 *       by Bannar
 *
 *    Doubly-linked list.
@@ -19,9 +19,9 @@
 *
 *    Implementation:
 *
-*       macro DEFINE_STRUCT_LIST takes ACCESS, NAME, TYPE
-*
 *       macro DEFINE_LIST takes ACCESS, NAME, TYPE
+*
+*       macro DEFINE_STRUCT_LIST takes ACCESS, NAME, TYPE
 *
 *          ACCESS - encapsulation, choose restriction access
 *            NAME - name of list type
@@ -104,86 +104,32 @@
 *****************************************************************************/
 library ListT requires Table, Alloc
 
-// Run here any global list types you want to be defined.
 //! runtextmacro DEFINE_LIST("", "IntegerList", "integer")
-
-//! textmacro_once DEFINE_STRUCT_LIST takes ACCESS, NAME, TYPE
-
-$ACCESS$ struct $NAME$Item extends array
-    // Cannot inherit methods via delegate due to limited array size
-
-    method operator data takes nothing returns $TYPE$
-        return IntegerListItem(this).data
-    endmethod
-
-    method operator data= takes $TYPE$ value returns nothing
-        set IntegerListItem(this).data = value
-    endmethod
-
-    method operator next takes nothing returns thistype
-        return IntegerListItem(this).next
-    endmethod
-
-    method operator next= takes thistype value returns nothing
-        set IntegerListItem(this).next = value
-    endmethod
-
-    method operator prev takes nothing returns thistype
-        return IntegerListItem(this).prev
-    endmethod
-
-    method operator prev= takes thistype value returns nothing
-        set IntegerListItem(this).prev = value
-    endmethod
-endstruct
-
-$ACCESS$ struct $NAME$ extends array
-    private delegate IntegerList parent
-
-    method front takes nothing returns $TYPE$
-        return parent.front()
-    endmethod
-
-    method back takes nothing returns $TYPE$
-        return parent.back()
-    endmethod
-
-    static method create takes nothing returns thistype
-        local thistype this = IntegerList.create()
-        set parent = this
-        return this
-    endmethod
-endstruct
-
-//! endtextmacro
+// Run here any global list types you want to be defined.
 
 //! textmacro_once DEFINE_LIST takes ACCESS, NAME, TYPE
-
 $ACCESS$ struct $NAME$Item extends array
     // No default ctor and dctor due to limited array size
 
     method operator data takes nothing returns $TYPE$
-        return Table(this).$TYPE$[0] // hashtable[ node, 0 ] = data
+        return Table(this).$TYPE$[-1] // hashtable[ node, -1 ] = data
     endmethod
-
     method operator data= takes $TYPE$ value returns nothing
-        set Table(this).$TYPE$[0] = value
+        set Table(this).$TYPE$[-1] = value
     endmethod
 
     method operator next takes nothing returns thistype
-        return Table(this)[1] // hashtable[ node, 1 ] = next
+        return Table(this)[-2] // hashtable[ node, -2 ] = next
     endmethod
-
     method operator next= takes thistype value returns nothing
-        set Table(this)[1] = value
+        set Table(this)[-2] = value
     endmethod
 
     method operator prev takes nothing returns thistype
-        return Table(this)[-1] // hashtable[ node, -1 ] = prev
+        return Table(this)[-3] // hashtable[ node, -3 ] = prev
     endmethod
-
     method operator prev= takes thistype value returns nothing
-        set Table(this)[-1] = value
+        set Table(this)[-3] = value
     endmethod
 endstruct
 
@@ -195,11 +141,11 @@ $ACCESS$ struct $NAME$ extends array
     implement Alloc
 
     private static method setNodeOwner takes $NAME$Item node, $NAME$ owner returns nothing
-        set Table(node)[2] = owner
+        set Table(node)[-4] = owner
     endmethod
 
     private static method getNodeOwner takes $NAME$Item node returns thistype
-        return Table(node)[2]
+        return Table(node)[-4]
     endmethod
 
     private method createNode takes $TYPE$ value returns $NAME$Item
@@ -386,7 +332,50 @@ $ACCESS$ struct $NAME$ extends array
         return this
     endmethod
 endstruct
+//! endtextmacro
 
+//! textmacro_once DEFINE_STRUCT_LIST takes ACCESS, NAME, TYPE
+$ACCESS$ struct $NAME$Item extends array
+    // Cannot inherit methods via delegate due to limited array size
+    method operator data takes nothing returns $TYPE$
+        return IntegerListItem(this).data
+    endmethod
+    method operator data= takes $TYPE$ value returns nothing
+        set IntegerListItem(this).data = value
+    endmethod
+
+    method operator next takes nothing returns thistype
+        return IntegerListItem(this).next
+    endmethod
+    method operator next= takes thistype value returns nothing
+        set IntegerListItem(this).next = value
+    endmethod
+
+    method operator prev takes nothing returns thistype
+        return IntegerListItem(this).prev
+    endmethod
+    method operator prev= takes thistype value returns nothing
+        set IntegerListItem(this).prev = value
+    endmethod
+endstruct
+
+$ACCESS$ struct $NAME$ extends array
+    private delegate IntegerList parent
+
+    static method create takes nothing returns thistype
+        local thistype this = IntegerList.create()
+        set parent = this
+        return this
+    endmethod
+
+    method front takes nothing returns $TYPE$
+        return parent.front()
+    endmethod
+
+    method back takes nothing returns $TYPE$
+        return parent.back()
+    endmethod
+endstruct
 //! endtextmacro
 
 endlibrary
