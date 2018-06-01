@@ -60,7 +60,7 @@
 *          Sets revival delay for specified destrutable type.
 *
 *       function GetDestructableRevivalDelay takes integer destructableType returns real
-*          Retrieves revival delay for specified destructable type. Defaults to 5.0.
+*          Retrieves revival delay for specified destructable type. Defaults to 60.0 seconds.
 *
 *       function EnableDestructableRevivalAnimation takes integer destructableType, boolean enable returns nothing
 *          Enables or disables revival animation for specified destructable type.
@@ -107,7 +107,7 @@ function GetDestructableRevivalDelay takes integer destructableType returns real
     if table.real.has(destructableType) then
         return table.real[destructableType]
     endif
-    return 5.0
+    return 60.0
 endfunction
 
 function EnableDestructableRevivalAnimation takes integer destructableType, boolean enable returns nothing
