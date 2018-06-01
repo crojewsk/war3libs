@@ -61,7 +61,7 @@
 *    Functions:
 *
 *       function AddSmoothItemPickupCondition takes SmoothItemPickupPredicate predicate returns nothing
-*          Adds new condition for item to be picked up smoothly.
+*          Adds new condition for item to be picked up smoothly. Conditions are aggregated in 'OR' fashion.
 *
 *       function RemoveSmoothItemPickupCondition takes SmoothItemPickupPredicate predicate returns nothing
 *          Removes specified condition from predicate list.

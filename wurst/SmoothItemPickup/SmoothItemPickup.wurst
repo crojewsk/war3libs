@@ -24,6 +24,7 @@ trigger eventTrigger = CreateTrigger()
 @configurable int PICK_UP_RANGE = 150
 
 public interface SmoothPickupPredicate
+    /** Determinates whether unit can pickup specified item. */
     function canPickup(unit whichUnit, item whichItem) returns boolean
 
 class PeriodicData
@@ -42,20 +43,24 @@ class PeriodicData
         if size == 1
             looper.pause()
 
+/** Returns unit attempting to pickup event item. */
 public function getSmoothItemPickupUnit() returns unit
     return eventUnit
 
+/** Returns item that is being picked up. */
 public function getSmoothItemPickupItem() returns item
     return eventItem
 
 public function registerSmoothItemPickupEvent(code func)
     eventTrigger.addCondition(Condition(func))
 
+/** Adds new condition for item to be picked up smoothly. Conditions are aggregated in 'OR' fashion. */
 public function addSmoothItemPickupCondition(SmoothPickupPredicate predicate)
     if predicate == null
         return
     conditions.add(predicate)
 
+/** Removes specified condition from predicate list. */
 public function removeSmoothItemPickupCondition(SmoothPickupPredicate predicate)
     if predicate == null
         return
