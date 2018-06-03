@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.2.1
+*    SmoothItemPickup v1.0.2.2
 *       by Bannar
 *
 *    Allows for item pickup despite unit inventory being full.
@@ -61,7 +61,8 @@
 *    Functions:
 *
 *       function AddSmoothItemPickupCondition takes SmoothItemPickupPredicate predicate returns nothing
-*          Adds new condition for item to be picked up smoothly. Conditions are aggregated in 'OR' fashion.
+*          Adds new condition for item to be picked up smoothly.
+*          Conditions are aggregated in 'OR' fashion.
 *
 *       function RemoveSmoothItemPickupCondition takes SmoothItemPickupPredicate predicate returns nothing
 *          Removes specified condition from predicate list.
@@ -229,7 +230,7 @@ private function OnCallback takes nothing returns nothing
         exitwhen iter == 0
         set data = iter.data
         if not UnitAlive(data.unit) or GetUnitCurrentOrder(data.unit) != 851986 /*
-        */ or GetItemTypeId(data.item) == 0 or IsItemOwned(data.item) then // order move
+        */ or not IsItemPickupable(data.item) then // order move
             call data.destroy()
         else
             if Test(data.unit, data.item, data.range) then
