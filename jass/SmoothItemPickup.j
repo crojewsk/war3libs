@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.2.2
+*    SmoothItemPickup v1.0.2.3
 *       by Bannar
 *
 *    Allows for item pickup despite unit inventory being full.
@@ -180,8 +180,6 @@ private function Test takes unit u, item itm, real range returns boolean
 
     if UnitHasItem(u, itm) then
         return true
-    elseif IsItemOwned(itm) then
-        return false
     endif
 
     set dx = GetItemX(itm) - GetUnitX(u)
@@ -245,13 +243,19 @@ endfunction
 private function OnNullTimer takes nothing returns nothing
     local timer t = GetExpiredTimer()
     local integer id = GetHandleId(t)
+    local unit u = table.unit[id]
+    local item itm = table.item[-id]
 
-    call FireEvent(table.unit[id], table.item[-id])
+    if UnitAlive(u) and IsItemPickupable(itm) then
+        call FireEvent(u, itm)
+    endif
 
     call table.unit.remove(id)
     call table.item.remove(-id)
     call DestroyTimer(t)
     set t = null
+    set u = null
+    set itm = null
 endfunction
 
 private function OnTargetOrder takes nothing returns nothing
