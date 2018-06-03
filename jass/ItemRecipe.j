@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.1.3
+*    ItemRecipe v1.1.1.4
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -484,9 +484,12 @@ endif
         local ItemRecipeList recipes
         local RecipeIngredient ingredient
 
+        if batch then // removing item when batch is ongoing is forbidden
+            return this
+        endif
+
         loop
             exitwhen iter == 0
-
             if iter.data.itemTypeId == itemTypeId then
                 set ingredient = iter.data
 
@@ -565,7 +568,7 @@ endif
         call resultIngredients.assign(items.size(), 0)
 
         loop
-            exitwhen iter == 0
+            exitwhen iter == 0 // test() validated this.count against items size already
             set found = false
             set itm = items[slot]
             set charges = GetItemCharges(itm)
@@ -573,7 +576,7 @@ endif
             set idx = ingredient.index
 
             loop
-                exitwhen ingredient.index != idx
+                exitwhen ingredient.index != idx // treats each part of recipe as possible batch
                 if GetItemTypeId(itm) == ingredient.itemTypeId and charges >= ingredient.charges then
                     set resultIngredients[slot] = RecipeIngredient[ingredient]
                     set found = true
@@ -624,6 +627,7 @@ endif
             set ingredient = iter.data
             set idx = ingredient.index
 
+            // Attempt to find any matching items from given batch within items collection
             loop
                 exitwhen ingredient.index != idx
                 set slot = 0

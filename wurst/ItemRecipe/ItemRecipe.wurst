@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.1.9
+*  ItemRecipe v1.0.2.0
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -189,7 +189,6 @@ public class ItemRecipe
     function startBatch()
         if not batch
             batch = true
-        // TODO debug message
 
     /** Closes current batch. */
     function endBatch()
@@ -297,14 +296,14 @@ public class ItemRecipe
         let resultIngredients = new HashMap<int, RecipeIngredient>()
 
         let iter = ingredients.iterator()..next()
-        while iter.current != iter.dummy // test() validated count > size already
+        while iter.current != iter.dummy // test() validated this.count against items size already
             found = false
             itm = items.get(slot)
             charges = itm.getCharges()
             ingredient = iter.current.elem
             idx = ingredient.index
 
-            while ingredient.index == idx // Treats each part of recipe as possible batch
+            while ingredient.index == idx // treats each part of recipe as possible batch
                 if itm.getTypeId() == ingredient.itemTypeId and charges >= ingredient.charges
                     resultIngredients.put(slot, new RecipeIngredient(ingredient))
                     found = true
@@ -318,11 +317,10 @@ public class ItemRecipe
                 destroy resultIngredients
                 iter.close()
                 return null
-            else
-                // Seek node which is not part of this batch
+            else // seek node which is not part of this batch
                 while ingredient.index == idx
                     if iter..next().current == iter.dummy
-                        break
+                        break // batch was the last piece of recipe
                     ingredient = iter.current.elem
             slot++
         iter.close()
@@ -345,7 +343,7 @@ public class ItemRecipe
             ingredient = iter.current.elem
             idx = ingredient.index
 
-            // Attempt to find any of item types from given batch within inventory
+            // Attempt to find any matching items from given batch within items collection
             while ingredient.index == idx
                 slot = 0
                 while slot < size
@@ -370,10 +368,10 @@ public class ItemRecipe
                 destroy resultIngredients
                 iter.close()
                 return null
-            else
+            else // seek node which is not part of this batch
                 while ingredient.index == idx
                     if iter..next().current == iter.dummy
-                        break
+                        break // batch was the last piece of recipe
                     ingredient = iter.current.elem
         iter.close()
         return resultIngredients
