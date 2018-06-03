@@ -53,9 +53,6 @@
 *          Returns collection of ingredients chosen to assemble the reward item,
 *          where each index corresponds to triggering unit inventory slot.
 *
-*       function SetEventItemRecipeHandled takes boolean handled returns nothing
-*          Sets value indicating if event should be propagated.
-*
 ******************************************************************************
 *
 *    struct RecipeIngredient:
