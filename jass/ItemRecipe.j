@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.1.2
+*    ItemRecipe v1.1.1.3
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -95,7 +95,7 @@
 *        |    Number of charges to assign to reward item.
 *        |
 *        | optional UnitRequirement requirement
-*        |    Criteria that unit needs to meet to assembly the recipe.
+*        |    Criteria that unit needs to meet to assemble the recipe.
 *        |
 *        | readonly integer count
 *        |    Total number of items required by the recipe.
@@ -164,13 +164,13 @@
 *        | method testEx takes unit whichUnit returns RecipeIngredientVector
 *        |    Checks if recipe can be assembled for specified unit.
 *        |
-*        | method assembly takes unit whichUnit, ItemVector items returns boolean
-*        |    Attempts to assembly recipe for specified unit given the ingredients list.
+*        | method assemble takes unit whichUnit, ItemVector items returns boolean
+*        |    Attempts to assemble recipe for specified unit given the ingredients list.
 *        |
-*        | method assemblyEx takes unit whichUnit returns boolean
-*        |    Attempts to assembly recipe for specified unit.
+*        | method assembleEx takes unit whichUnit returns boolean
+*        |    Attempts to assemble recipe for specified unit.
 *        |
-*        | method disassembly takes unit whichUnit returns boolean
+*        | method disassemble takes unit whichUnit returns boolean
 *        |    Reverts the assembly, removing the reward item and returning all ingredients to specified unit.
 *
 *
@@ -178,10 +178,10 @@
 *
 *    Functions:
 *
-*       function UnitAssemblyItem takes unit whichUnit, integer itemTypeId returns boolean
+*       function UnitAssembleItem takes unit whichUnit, integer itemTypeId returns boolean
 *          Attempts to assemble specified item type for provided unit.
 *
-*       function UnitDisassemblyItem takes unit whichUnit, item whichItem returns boolean
+*       function UnitDisassembleItem takes unit whichUnit, item whichItem returns boolean
 *          Reverts the assembly, removing the reward item and returning all ingredients to specified unit.
 *
 *****************************************************************************/
@@ -703,7 +703,7 @@ endif
         return result
     endmethod
 
-    method assembly takes unit whichUnit, ItemVector fromItems returns boolean
+    method assemble takes unit whichUnit, ItemVector fromItems returns boolean
         local integer size = fromItems.size()
         local RecipeIngredient ingredient
         local item itm
@@ -749,7 +749,7 @@ endif
         return true
     endmethod
 
-    method assemblyEx takes unit whichUnit returns boolean
+    method assembleEx takes unit whichUnit returns boolean
         local integer slot = 0
         local integer size = UnitInventorySize(whichUnit)
         local ItemVector items = ItemVector.create()
@@ -761,12 +761,12 @@ endif
             set slot = slot + 1
         endloop
 
-        set result = assembly(whichUnit, items)
+        set result = assemble(whichUnit, items)
         call items.destroy()
         return result
     endmethod
 
-    method disassembly takes unit whichUnit returns boolean
+    method disassemble takes unit whichUnit returns boolean
         local integer slot = 0
         local integer size = UnitInventorySize(whichUnit)
         local boolean found = false
@@ -812,7 +812,7 @@ endif
     endmethod
 endstruct
 
-function UnitAssemblyItem takes unit whichUnit, integer itemTypeId returns boolean
+function UnitAssembleItem takes unit whichUnit, integer itemTypeId returns boolean
     local ItemRecipeList recipes = ItemRecipe.getRecipes(itemTypeId)
     local ItemRecipeListItem iter
 
@@ -820,7 +820,7 @@ function UnitAssemblyItem takes unit whichUnit, integer itemTypeId returns boole
         set iter = recipes.first
         loop
             exitwhen iter == 0
-            if iter.data.assemblyEx(whichUnit) then
+            if iter.data.assembleEx(whichUnit) then
                 return true
             endif
             set iter = iter.next
@@ -829,7 +829,7 @@ function UnitAssemblyItem takes unit whichUnit, integer itemTypeId returns boole
     return false
 endfunction
 
-function UnitDisassemblyItem takes unit whichUnit, item whichItem returns boolean
+function UnitDisassembleItem takes unit whichUnit, item whichItem returns boolean
     local integer itemTypeId = GetItemTypeId(whichItem)
     local ItemRecipeList recipes = ItemRecipe.getRecipes(itemTypeId)
 
@@ -840,7 +840,7 @@ function UnitDisassemblyItem takes unit whichUnit, item whichItem returns boolea
         return false
     endif
     
-    return recipes.front().disassembly(whichUnit)
+    return recipes.front().disassemble(whichUnit)
 endfunction
 
 private function OnPickup takes nothing returns nothing
@@ -856,7 +856,7 @@ private function OnPickup takes nothing returns nothing
         loop
             exitwhen iter == 0
             set recipe = iter.data
-            if recipe.pickupable and recipe.assemblyEx(u) then
+            if recipe.pickupable and recipe.assembleEx(u) then
                 exitwhen true
             endif
             set iter = iter.next
@@ -893,7 +893,7 @@ private function OnMoved takes nothing returns nothing
         loop
             exitwhen iter == 0
             set recipe = iter.data
-            if recipe.pickupable and recipe.assembly(u, items) then
+            if recipe.pickupable and recipe.assemble(u, items) then
                 exitwhen true
             endif
             set iter = iter.next
@@ -916,7 +916,7 @@ private function OnCast takes nothing returns nothing
         set iter = recipes.first
         loop
             exitwhen iter == 0
-            if iter.data.assemblyEx(u) then
+            if iter.data.assembleEx(u) then
                 exitwhen true
             endif
             set iter = iter.next
@@ -992,7 +992,7 @@ private function OnSmoothPickup takes nothing returns nothing
             set slot = slot + 1
         endloop
         call items.push(itm)
-        call recipe.assembly(u, items)
+        call recipe.assemble(u, items)
     endif
 
     set u = null

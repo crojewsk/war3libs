@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.1.8
+*  ItemRecipe v1.0.1.9
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -401,8 +401,8 @@ public class ItemRecipe
         destroy items
         return result
 
-    /** Attempts to assembly recipe for specified unit given the ingredients list. */
-    function assembly(unit whichUnit, LinkedList<item> fromItems) returns boolean
+    /** Attempts to assemble recipe for specified unit given the ingredients list. */
+    function assemble(unit whichUnit, LinkedList<item> fromItems) returns boolean
         int size = fromItems.size()
         RecipeIngredient ingredient
         item itm
@@ -435,20 +435,20 @@ public class ItemRecipe
         destroy resultIngredients
         return true
 
-    /** Attempts to assembly recipe for specified unit. */
-    function assembly(unit whichUnit) returns boolean
+    /** Attempts to assemble recipe for specified unit. */
+    function assemble(unit whichUnit) returns boolean
         int size = whichUnit.inventorySize()
         let items = new LinkedList<item>()
 
         for slot = 0 to size - 1
             items.push(whichUnit.itemInSlot(slot))
 
-        boolean result = assembly(whichUnit, items)
+        boolean result = assemble(whichUnit, items)
         destroy items
         return result
 
     /** Reverts the assembly, removing the reward item and returning all ingredients to specified unit. */
-    function disassembly(unit whichUnit) returns boolean
+    function disassemble(unit whichUnit) returns boolean
         int size = whichUnit.inventorySize()
         boolean found = false
         item itm = null
@@ -474,16 +474,16 @@ public class ItemRecipe
         return true
 
 /** Attempts to assemble specified item type for provided unit. */
-public function unit.assemblyItem(int itemTypeId) returns boolean
+public function unit.assembleItem(int itemTypeId) returns boolean
     let recipes = ItemRecipe.getRecipes(itemTypeId)
     if recipes != null
         for recipe in recipes
-            if recipe.assembly(this)
+            if recipe.assemble(this)
                 return true
     return false
 
 /** Reverts the assembly, removing the reward item and returning all ingredients to specified unit. */
-public function unit.disassemblyItem(item whichItem) returns boolean
+public function unit.disassembleItem(item whichItem) returns boolean
     int itemTypeId = whichItem.getTypeId()
     let recipes = ItemRecipe.getRecipes(itemTypeId)
 
@@ -493,7 +493,7 @@ public function unit.disassemblyItem(item whichItem) returns boolean
     if recipes.size() > 1
         return false
 
-    return recipes.getFirst().disassembly(this)
+    return recipes.getFirst().disassemble(this)
 
 function onPickup()
     unit u = GetTriggerUnit()
@@ -503,7 +503,7 @@ function onPickup()
 
     if recipes != null
         for recipe in recipes
-            if recipe.pickupable and recipe.assembly(u)
+            if recipe.pickupable and recipe.assemble(u)
                 break
 
 function onMoved()
@@ -521,7 +521,7 @@ function onMoved()
         items.set(getInventorySlotTo(), itm)
 
         for recipe in recipes
-            if recipe.pickupable and recipe.assembly(u, items)
+            if recipe.pickupable and recipe.assemble(u, items)
                 break
         destroy items
 
@@ -532,7 +532,7 @@ function onCast()
 
     if recipes != null
         for recipe in recipes
-            if recipe.assembly(u)
+            if recipe.assemble(u)
                 break
 
 function getCheatRecipe(unit u, item itm) returns ItemRecipe
@@ -572,7 +572,7 @@ function onSmoothPickup()
     for slot = 0 to size - 1
         items.push(u.itemInSlot(slot))
     items.push(itm)
-    recipe.assembly(u, items)
+    recipe.assemble(u, items)
 
 class RecipeSmoothPickupPredicate implements SmoothPickupPredicate
     function canPickup(unit whichUnit, item whichItem) returns boolean
