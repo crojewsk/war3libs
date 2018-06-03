@@ -135,9 +135,6 @@ public class LimitException
 
 /** Allows to restrict or limit the number of item equipped by unit. */
 public class ItemRestriction
-    // Stores essential data:
-    //  unit.index: current item count
-    //  unit.-index: currently chosen exception from the exception list
     protected Table cache
     /** Item types that enforce this restriction. */
     LinkedList<int> items
