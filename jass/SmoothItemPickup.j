@@ -5,6 +5,8 @@
 *
 *    Allows for item pickup despite unit inventory being full.
 *
+*    Special thanks for Jampion.
+*
 ******************************************************************************
 *
 *    Requirements:
