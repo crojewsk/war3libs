@@ -22,13 +22,13 @@
 *    Optional requirements:
 *
 *       InventoryEvent by Bannar
-*          hiveworkshop.com/threads/...
+*          hiveworkshop.com/threads/snippet-inventoryevent.287084/
 *
 *       ItemRestriction by Bannar
-*          hiveworkshop.com/threads/...
+*          hiveworkshop.com/threads/itemrestriction.306012/
 *
 *       SmoothItemPickup by Bannar
-*          hiveworkshop.com/threads/...
+*          hiveworkshop.com/threads/smoothitempickup.306016/
 *
 ******************************************************************************
 *

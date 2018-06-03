@@ -25,7 +25,7 @@
 *    Optional requirement:
 *
 *       SmoothItemPickup by Bannar
-*          hiveworkshop.com/threads/...
+*          hiveworkshop.com/threads/smoothitempickup.306016/
 *
 ******************************************************************************
 *
