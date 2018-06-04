@@ -1,5 +1,5 @@
 /*
-*  SmoothItemPickup v1.0.0.8
+*  SmoothItemPickup v1.0.1.0
 *     by Bannar
 *
 *  Allows for item pickup despite unit inventory being full.
@@ -21,7 +21,7 @@ item eventItem = null
 trigger eventTrigger = CreateTrigger()
 
 /** Default pickup range degined in gameplay constants. */
-@configurable int PICK_UP_RANGE = 150
+@configurable real PICK_UP_RANGE = 150
 
 public interface SmoothPickupPredicate
     /** Determinates whether unit can pickup specified item. */
@@ -56,15 +56,13 @@ public function registerSmoothItemPickupEvent(code func)
 
 /** Adds new condition for item to be picked up smoothly. Conditions are aggregated in 'OR' fashion. */
 public function addSmoothItemPickupCondition(SmoothPickupPredicate predicate)
-    if predicate == null
-        return
-    conditions.add(predicate)
+    if predicate != null
+        conditions.add(predicate)
 
 /** Removes specified condition from predicate list. */
 public function removeSmoothItemPickupCondition(SmoothPickupPredicate predicate)
-    if predicate == null
-        return
-    conditions.remove(predicate)
+    if predicate != null
+        conditions.remove(predicate)
 
 function fireEvent(unit u, item itm)
     let prevUnit = eventUnit
@@ -81,10 +79,9 @@ function test(unit u, item itm, real range) returns boolean
     if u.hasItem(itm)
         return true
 
-    let dx = itm.getX() - u.getX()
-    let dy = itm.getY() - u.getY()
+    var pos = itm.getPos() - u.getPos()
     // Assumes range is multipled to avoid invoking SquareRoot
-    return (dx * dx +  dy * dy) <= range
+    return pos.dot(pos) <= range
 
 function onCallback()
     var iter = PeriodicData.iterator()
@@ -134,12 +131,12 @@ function onTargetOrder()
             data = map.get(u.getHandleId())
         data.itm = itm
 
-        var angle = bj_RADTODEG * Atan2(u.getY() - itm.getY(), u.getX() - itm.getX())
-        var x = itm.getX() + PICK_UP_RANGE * Cos(angle * bj_DEGTORAD)
-        var y = itm.getY() + PICK_UP_RANGE * Sin(angle * bj_DEGTORAD)
+        var ipos = itm.getPos()
+        var angle = ipos.angleTo(u.getPos())
+        var resultPos = ipos + angle.toVec(PICK_UP_RANGE)
         trigger t = getPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER)
         t.disable()
-        u.issuePointOrderById(Orders.move, vec2(x, y))
+        u.issuePointOrderById(Orders.move, resultPos)
         t.enable()
 
 init
