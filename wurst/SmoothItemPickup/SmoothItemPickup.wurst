@@ -80,8 +80,6 @@ function fireEvent(unit u, item itm)
 function test(unit u, item itm, real range) returns boolean
     if u.hasItem(itm)
         return true
-    if itm.isOwned()
-        return false
 
     let dx = itm.getX() - u.getX()
     let dy = itm.getY() - u.getY()
@@ -92,8 +90,7 @@ function onCallback()
     var iter = PeriodicData.iterator()
     while iter.hasNext()
         var data = iter.next()
-        if not data.picker.isAlive() or data.picker.getCurrentOrder() != Orders.move
-            or data.itm.getTypeId() == 0 or data.itm.isOwned()
+        if not data.picker.isAlive() or data.picker.getCurrentOrder() != Orders.move or not data.itm.isPickupable()
             destroy data
         else
             if test(data.picker, data.itm, data.range)
@@ -126,7 +123,8 @@ function onTargetOrder()
         // Ensures order is finished before item is picked up.
         // Fixes the issue with unit moving towards the item location, rather than stopping
         nullTimer() ->
-            fireEvent(u, itm)
+            if u.isAlive() and itm.isPickupable()
+                fireEvent(u, itm)
     else // if unit is not nearby target item, issue artificial move order
         if not map.has(u.getHandleId())
             if PeriodicData.size == 0
