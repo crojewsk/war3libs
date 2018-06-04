@@ -1,5 +1,5 @@
 /*
-*  InventoryEvent v1.0.0.9
+*  InventoryEvent v1.0.1.0
 *     by Bannar
 *
 *  For intuitive inventory event handling.
@@ -18,18 +18,23 @@ trigger eventUsedTrigger = CreateTrigger()
 public constant EVENT_ITEM_INVENTORY_MOVE = 1
 public constant EVENT_ITEM_INVENTORY_USE = 2
 
+/** Returns unit which manipulated event item. */
 public function getInventoryManipulatingUnit() returns unit
     return eventUnit
 
+/** Returns manupilated event item. */
 public function getInventoryManipulatedItem() returns item
     return eventItem
 
+/** Returns slot index of manipulated item from which it was moved or used. */
 public function getInventorySlotFrom() returns int
     return eventSlotFrom
 
+/** Returns slot index of manipulated item to which it was moved. */
 public function getInventorySlotTo() returns int
     return eventSlotTo
 
+/** Returns item which manipulated item switched position with if any. */
 public function getInventorySwappedItem() returns item
     return eventUnit.itemInSlot(eventSlotTo)
 
