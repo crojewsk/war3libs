@@ -1,5 +1,5 @@
 /*
-*  InventoryEvent v1.0.1.0
+*  InventoryEvent v1.0.1.1
 *     by Bannar
 *
 *  For intuitive inventory event handling.
@@ -45,11 +45,12 @@ public function registerInventoryEvent(int whichEvent, code cb)
         eventUsedTrigger.addCondition(Condition(cb))
 
 public function getInventoryEventTrigger(int whichEvent) returns trigger
+    trigger result = null
     if whichEvent == EVENT_ITEM_INVENTORY_MOVE
-        return eventMovedTrigger
+        result = eventMovedTrigger
     else if whichEvent == EVENT_ITEM_INVENTORY_USE
-        return eventUsedTrigger
-    return null
+        result = eventUsedTrigger
+    return result
 
 function fireEvent(trigger evt, unit u, item itm, integer slotFrom, integer slotTo)
     unit prevUnit = eventUnit
