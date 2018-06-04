@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.2.3
+*    SmoothItemPickup v1.0.2.4
 *       by Bannar
 *
 *    Allows for item pickup despite unit inventory being full.
@@ -58,7 +58,7 @@
 *
 *    Constants:
 *
-*       constant integer PICK_UP_RANGE = 150
+*       constant real PICK_UP_RANGE = 150
 *
 *    Functions:
 *
@@ -76,7 +76,7 @@ library SmoothItemPickup requires /*
                          */ ExtensionMethods
 
 globals
-    private constant integer PICK_UP_RANGE = 150
+    private constant real PICK_UP_RANGE = 150
 endglobals
 
 globals
