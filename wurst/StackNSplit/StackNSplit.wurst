@@ -409,6 +409,6 @@ class StackSmoothPickupPredicate implements SmoothPickupPredicate
 
 init
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickup())
-    registerInventoryEvent(EVENT_ITEM_INVENTORY_MOVE, () -> onMoved())
+    registerInventoryEvent(EVENT_ITEM_INVENTORY.MOVE, () -> onMoved())
     registerSmoothItemPickupEvent(() -> onSmoothPickup())
     addSmoothItemPickupCondition(new StackSmoothPickupPredicate())

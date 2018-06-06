@@ -579,7 +579,7 @@ class RecipeSmoothPickupPredicate implements SmoothPickupPredicate
 init
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickup())
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_EFFECT, () -> onCast())
-    registerInventoryEvent(EVENT_ITEM_INVENTORY_MOVE, () -> onMoved())
+    registerInventoryEvent(EVENT_ITEM_INVENTORY.MOVE, () -> onMoved())
 
     // Allow for smooth pickup for pickup-type unordered recipes
     registerSmoothItemPickupEvent(() -> onSmoothPickup())

@@ -3,33 +3,32 @@ import InventoryEvent
 import ClosureTimers
 
 function onInventoryMove()
-    unit u = getInventoryManipulatingUnit()
-    item itm = getInventoryManipulatedItem()
-    item itmSwapped = getInventorySwappedItem()
-    int slotFrom = getInventorySlotFrom()
-    int slotTo = getInventorySlotTo()
+    var u = getInventoryManipulatingUnit()
+    var itm = getInventoryManipulatedItem()
+    var itmSwapped = getInventorySwappedItem()
+    var slotFrom = getInventorySlotFrom()
+    var slotTo = getInventorySlotTo()
     string s
 
     if itmSwapped != null
         s = u.getName() + " swapped " + itm.getName() + "[" + slotFrom.toString() + "] with "
-        s = s + itmSwapped.getName() + "[" + slotTo.toString() + "]"
+        s += itmSwapped.getName() + "[" + slotTo.toString() + "]"
     else
         s = u.getName() + " moved " + itm.getName() + "[" + slotFrom.toString() + "] to slot " + slotTo.toString()
-
     print(s)
 
 function onInventoryUse()
-    unit u = getInventoryManipulatingUnit()
-    item itm = getInventoryManipulatedItem()
-    int slotFrom = getInventorySlotFrom()
-    string s
+    var u = getInventoryManipulatingUnit()
+    var itm = getInventoryManipulatedItem()
+    var slotFrom = getInventorySlotFrom()
+    var s = u.getName() + " used " + itm.getName() + "[" + slotFrom.toString() + "]"
 
-    s = u.getName() + " used " + itm.getName() + "[" + slotFrom.toString() + "]"
     print(s)
 
 public function initInventoryEventDemo()
-    registerInventoryEvent(EVENT_ITEM_INVENTORY_MOVE, () -> onInventoryMove())
-    registerInventoryEvent(EVENT_ITEM_INVENTORY_USE, () -> onInventoryUse())
+    registerInventoryEvent(EVENT_ITEM_INVENTORY.MOVE, () -> onInventoryMove())
+    registerInventoryEvent(EVENT_ITEM_INVENTORY.USE, () -> onInventoryUse())
+
     doAfter(1.) ->
         real x = -200
         real y = -200

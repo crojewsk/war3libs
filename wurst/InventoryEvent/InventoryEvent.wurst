@@ -1,5 +1,5 @@
 /*
-*  InventoryEvent v1.0.1.1
+*  InventoryEvent v1.0.1.2
 *     by Bannar
 *
 *  For intuitive inventory event handling.
@@ -8,87 +8,75 @@ package InventoryEvent
 import RegisterEvents
 import Orders
 
-unit eventUnit = null
-item eventItem = null
-int eventSlotFrom = -1
-int eventSlotTo = -1
-trigger eventMovedTrigger = CreateTrigger()
-trigger eventUsedTrigger = CreateTrigger()
+tuple eventState(unit u, item itm, int slotFrom, int slotTo)
 
-public constant EVENT_ITEM_INVENTORY_MOVE = 1
-public constant EVENT_ITEM_INVENTORY_USE = 2
+var eventData = eventState(null, null, -1, -1)
+constant let eventMovedTrigger = CreateTrigger()
+constant let eventUsedTrigger = CreateTrigger()
+
+public enum EVENT_ITEM_INVENTORY
+    MOVE
+    USE
 
 /** Returns unit which manipulated event item. */
 public function getInventoryManipulatingUnit() returns unit
-    return eventUnit
+    return eventData.u
 
 /** Returns manupilated event item. */
 public function getInventoryManipulatedItem() returns item
-    return eventItem
+    return eventData.itm
 
 /** Returns slot index of manipulated item from which it was moved or used. */
 public function getInventorySlotFrom() returns int
-    return eventSlotFrom
+    return eventData.slotFrom
 
 /** Returns slot index of manipulated item to which it was moved. */
 public function getInventorySlotTo() returns int
-    return eventSlotTo
+    return eventData.slotTo
 
 /** Returns item which manipulated item switched position with if any. */
 public function getInventorySwappedItem() returns item
-    return eventUnit.itemInSlot(eventSlotTo)
+    return eventData.u.itemInSlot(eventData.slotTo)
 
-public function registerInventoryEvent(int whichEvent, code cb)
-    if whichEvent == EVENT_ITEM_INVENTORY_MOVE
-        eventMovedTrigger.addCondition(Condition(cb))
-    else if whichEvent == EVENT_ITEM_INVENTORY_USE
-        eventUsedTrigger.addCondition(Condition(cb))
+public function registerInventoryEvent(EVENT_ITEM_INVENTORY whichEvent, code cb)
+    switch whichEvent
+        case EVENT_ITEM_INVENTORY.MOVE
+            eventMovedTrigger.addCondition(Condition(cb))
+        case EVENT_ITEM_INVENTORY.USE
+            eventUsedTrigger.addCondition(Condition(cb))
 
-public function getInventoryEventTrigger(int whichEvent) returns trigger
+public function getInventoryEventTrigger(EVENT_ITEM_INVENTORY whichEvent) returns trigger
     trigger result = null
-    if whichEvent == EVENT_ITEM_INVENTORY_MOVE
-        result = eventMovedTrigger
-    else if whichEvent == EVENT_ITEM_INVENTORY_USE
-        result = eventUsedTrigger
+
+    switch whichEvent
+        case EVENT_ITEM_INVENTORY.MOVE
+            result = eventMovedTrigger
+        case EVENT_ITEM_INVENTORY.USE
+            result = eventUsedTrigger
     return result
 
-function fireEvent(trigger evt, unit u, item itm, integer slotFrom, integer slotTo)
-    unit prevUnit = eventUnit
-    item prevItem = eventItem
-    int prevSlotFrom = eventSlotFrom
-    int prevSlotTo = eventSlotTo
-
-    eventUnit = u
-    eventItem = itm
-    eventSlotFrom = slotFrom
-    eventSlotTo = slotTo
-
+function fireEvent(trigger evt, eventState currState)
+    var prevState = eventData
+    eventData = currState
     evt.evaluate()
-
-    eventUnit = prevUnit
-    eventItem = prevItem
-    eventSlotFrom = prevSlotFrom
-    eventSlotTo = prevSlotTo
+    eventData = prevState
 
 function onItemOrder()
-    let order = GetIssuedOrderId()
-    let u = GetTriggerUnit()
-    item itm
-    int slotFrom
-    int slotTo
+    var order = GetIssuedOrderId()
+    var u = GetTriggerUnit()
 
     if order >= SpecialOrders.itemdrag00 and order <= SpecialOrders.itemdrag05
-        itm = GetOrderTargetItem()
-        slotFrom = u.getItemSlot(itm)
-        slotTo = order - SpecialOrders.itemdrag00
-        fireEvent(eventMovedTrigger, u, itm, slotFrom, slotTo)
+        var itm = GetOrderTargetItem()
+        var slotFrom = u.getItemSlot(itm)
+        var slotTo = order - SpecialOrders.itemdrag00
+        fireEvent(eventMovedTrigger, eventState(u, itm, slotFrom, slotTo))
     else
-        slotFrom = order - SpecialOrders.itemuse00
-        itm = u.itemInSlot(slotFrom)
-        fireEvent(eventUsedTrigger, u, itm, slotFrom, -1)
+        var slotFrom = order - SpecialOrders.itemuse00
+        var itm = u.itemInSlot(slotFrom)
+        fireEvent(eventUsedTrigger, eventState(u, itm, slotFrom, -1))
 
 function onAnyOrder()
-    let order = GetIssuedOrderId()
+    var order = GetIssuedOrderId()
     if order >= SpecialOrders.itemdrag00 and order <= SpecialOrders.itemuse05
         onItemOrder()
 
