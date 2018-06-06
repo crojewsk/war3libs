@@ -1,5 +1,5 @@
 /*
-*  SmoothItemPickup v1.0.1.0
+*  SmoothItemPickup v1.0.1.1
 *     by Bannar
 *
 *  Allows for item pickup despite unit inventory being full.
@@ -12,47 +12,28 @@ import RegisterEvents
 import ClosureTimers
 import Orders
 
-let conditions = new LinkedList<SmoothPickupPredicate>()
-let map = new HashMap<int, PeriodicData>()
-timer looper = CreateTimer()
-// Event related globals
-unit eventUnit = null
-item eventItem = null
-trigger eventTrigger = CreateTrigger()
+tuple eventState(unit u, item itm)
+
+var eventData = eventState(null, null)
+constant eventTrigger = CreateTrigger()
+
+constant conditions = new LinkedList<SmoothPickupPredicate>()
+constant looper = CreateTimer()
 
 /** Default pickup range degined in gameplay constants. */
-@configurable real PICK_UP_RANGE = 150
+@configurable constant real PICK_UP_RANGE = 150.0
 
 public interface SmoothPickupPredicate
     /** Determinates whether unit can pickup specified item. */
     function canPickup(unit whichUnit, item whichItem) returns boolean
 
-class PeriodicData
-    use LinkedListModule
-    unit picker
-    item itm
-    real range
-
-    construct(unit u, real range)
-        this.picker = u
-        this.range = range
-        map.put(u.getHandleId(), this)
-
-    ondestroy
-        map.remove(picker.getHandleId())
-        if size == 1
-            looper.pause()
-
 /** Returns unit attempting to pickup event item. */
 public function getSmoothItemPickupUnit() returns unit
-    return eventUnit
+    return eventData.u
 
 /** Returns item that is being picked up. */
 public function getSmoothItemPickupItem() returns item
-    return eventItem
-
-public function registerSmoothItemPickupEvent(code func)
-    eventTrigger.addCondition(Condition(func))
+    return eventData.itm
 
 /** Adds new condition for item to be picked up smoothly. Conditions are aggregated in 'OR' fashion. */
 public function addSmoothItemPickupCondition(SmoothPickupPredicate predicate)
@@ -64,21 +45,42 @@ public function removeSmoothItemPickupCondition(SmoothPickupPredicate predicate)
     if predicate != null
         conditions.remove(predicate)
 
-function fireEvent(unit u, item itm)
-    let prevUnit = eventUnit
-    let prevItem = eventItem
-    eventUnit = u
-    eventItem = itm
+public function registerSmoothItemPickupEvent(code func)
+    eventTrigger.addCondition(Condition(func))
 
+class PeriodicData
+    static constant instances = new HashMap<int, PeriodicData>()
+
+    use LinkedListModule
+    unit picker
+    item itm
+    real range
+
+    construct(unit u, real range)
+        this.picker = u
+        this.range = range
+        instances.put(u.getHandleId(), this)
+
+    ondestroy
+        instances.remove(picker.getHandleId())
+        if size == 1
+            looper.pause()
+
+    static function get(int index) returns thistype
+        thistype result = null
+        if instances.has(index)
+            result = instances.get(index)
+        return result
+
+function fireEvent(eventState currState)
+    var prevState = eventData
+    eventData = currState
     eventTrigger.evaluate()
-
-    eventUnit = prevUnit
-    eventItem = prevItem
+    eventData = prevState
 
 function test(unit u, item itm, real range) returns boolean
     if u.hasItem(itm)
         return true
-
     var pos = itm.getPos() - u.getPos()
     // Assumes range is multipled to avoid invoking SquareRoot
     return pos.dot(pos) <= range
@@ -91,21 +93,20 @@ function onCallback()
             destroy data
         else
             if test(data.picker, data.itm, data.range)
-                fireEvent(data.picker, data.itm)
+                fireEvent(eventState(data.picker, data.itm))
                 destroy data
     iter.close()
 
 function onTargetOrder()
-    unit u = GetTriggerUnit()
-    item itm = GetOrderTargetItem()
-    PeriodicData data
-    bool proceed = false
+    var u = GetTriggerUnit()
+    var itm = GetOrderTargetItem()
 
     if not u.isInventoryFull() or GetIssuedOrderId() != SpecialOrders.smart
         return
     if itm == null or itm.isPowerup()
         return
 
+    var proceed = false
     for condition in conditions
         if condition.canPickup(u, itm)
             proceed = true
@@ -113,28 +114,28 @@ function onTargetOrder()
     if not proceed
         return
 
-    real collision = u.getCollisionSize()
-    real range = (PICK_UP_RANGE + collision) * (PICK_UP_RANGE + collision)
+    var collision = u.getCollisionSize()
+    var range = (PICK_UP_RANGE + collision) * (PICK_UP_RANGE + collision)
 
     if test(u, itm, range)
         // Ensures order is finished before item is picked up.
         // Fixes the issue with unit moving towards the item location, rather than stopping
         nullTimer() ->
             if u.isAlive() and itm.isPickupable()
-                fireEvent(u, itm)
-    else // if unit is not nearby target item, issue artificial move order
-        if not map.has(u.getHandleId())
+                fireEvent(eventState(u, itm))
+    // If unit is not nearby target item, issue artificial move order
+    else
+        var data = PeriodicData.get(u.getHandleId())
+        if data == null
             if PeriodicData.size == 0
                 looper.startPeriodic(0.031250000, () -> onCallback())
             data = new PeriodicData(u, range)
-        else
-            data = map.get(u.getHandleId())
         data.itm = itm
 
         var ipos = itm.getPos()
         var angle = ipos.angleTo(u.getPos())
         var resultPos = ipos + angle.toVec(PICK_UP_RANGE)
-        trigger t = getPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER)
+        var t = getPlayerUnitEventTrigger(EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER)
         t.disable()
         u.issuePointOrderById(Orders.move, resultPos)
         t.enable()
