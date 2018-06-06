@@ -1,5 +1,5 @@
 /*
-*  InventoryEvent v1.0.1.2
+*  InventoryEvent v1.0.1.3
 *     by Bannar
 *
 *  For intuitive inventory event handling.
@@ -11,8 +11,8 @@ import Orders
 tuple eventState(unit u, item itm, int slotFrom, int slotTo)
 
 var eventData = eventState(null, null, -1, -1)
-constant let eventMovedTrigger = CreateTrigger()
-constant let eventUsedTrigger = CreateTrigger()
+constant eventMovedTrigger = CreateTrigger()
+constant eventUsedTrigger = CreateTrigger()
 
 public enum EVENT_ITEM_INVENTORY
     MOVE
@@ -38,12 +38,12 @@ public function getInventorySlotTo() returns int
 public function getInventorySwappedItem() returns item
     return eventData.u.itemInSlot(eventData.slotTo)
 
-public function registerInventoryEvent(EVENT_ITEM_INVENTORY whichEvent, code cb)
+public function registerInventoryEvent(EVENT_ITEM_INVENTORY whichEvent, code func)
     switch whichEvent
         case EVENT_ITEM_INVENTORY.MOVE
-            eventMovedTrigger.addCondition(Condition(cb))
+            eventMovedTrigger.addCondition(Condition(func))
         case EVENT_ITEM_INVENTORY.USE
-            eventUsedTrigger.addCondition(Condition(cb))
+            eventUsedTrigger.addCondition(Condition(func))
 
 public function getInventoryEventTrigger(EVENT_ITEM_INVENTORY whichEvent) returns trigger
     trigger result = null
