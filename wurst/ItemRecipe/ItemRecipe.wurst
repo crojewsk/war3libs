@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.2.2
+*  ItemRecipe v1.0.2.3
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -19,7 +19,7 @@ let recipeMap = new HashMap<int, LinkedList<ItemRecipe>>()
 ItemRecipe eventRecipe = null
 unit eventUnit = null
 item eventItem = null
-HashList<RecipeIngredient> eventIngredients = null
+LinkedList<item> eventIngredients = null
 trigger eventTrigger = CreateTrigger()
 
 /** Returns triggering item recipe. */
@@ -36,7 +36,7 @@ public function getEventItemRecipeItem() returns item
 
 /** Returns collection of ingredients chosen to assemble the reward item,
     where each index corresponds to triggering unit inventory slot. */
-public function getEventItemRecipeIngredients() returns HashList<RecipeIngredient>
+public function getEventItemRecipeIngredients() returns LinkedList<item>
     return eventIngredients
 
 /** Registers new event handler for item recipe event. */
@@ -47,7 +47,7 @@ public function registerItemRecipeEvent(code func)
 public function getItemRecipeEventTrigger() returns trigger
     return eventTrigger
 
-function fireEvent(ItemRecipe recipe, unit u, item itm, HashList<RecipeIngredient> ingredients)
+function fireEvent(ItemRecipe recipe, unit u, item itm, LinkedList<item> ingredients)
     ItemRecipe prevRecipe = eventRecipe
     unit prevUnit = eventUnit
     item prevItem = eventItem
@@ -414,7 +414,12 @@ public class ItemRecipe
         itm = CreateItem(reward, whichUnit.getX(), whichUnit.getY())
         if charges > 0
             itm.setCharges(charges)
-        fireEvent(this, whichUnit, itm, resultIngredients)
+
+        var usedItems = new LinkedList<item>()
+        for i = 0 to resultIngredients.size() - 1
+            if resultIngredients.get(i) != null
+                usedItems.push(fromItems.get(i))
+        fireEvent(this, whichUnit, itm, usedItems)
 
         for i = 0 to size - 1
             ingredient = resultIngredients.get(i)
