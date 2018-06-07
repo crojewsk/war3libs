@@ -6,6 +6,7 @@
 */
 package ItemRecipe
 import HashMap
+import HashList
 import LinkedList
 import RegisterEvents
 import ItemRestriction
@@ -18,7 +19,7 @@ let recipeMap = new HashMap<int, LinkedList<ItemRecipe>>()
 ItemRecipe eventRecipe = null
 unit eventUnit = null
 item eventItem = null
-HashMap<int, RecipeIngredient> eventIngredients = null
+HashList<RecipeIngredient> eventIngredients = null
 trigger eventTrigger = CreateTrigger()
 
 /** Returns triggering item recipe. */
@@ -35,7 +36,7 @@ public function getEventItemRecipeItem() returns item
 
 /** Returns collection of ingredients chosen to assemble the reward item,
     where each index corresponds to triggering unit inventory slot. */
-public function getEventItemRecipeIngredients() returns HashMap<int, RecipeIngredient>
+public function getEventItemRecipeIngredients() returns HashList<RecipeIngredient>
     return eventIngredients
 
 /** Registers new event handler for item recipe event. */
@@ -46,7 +47,7 @@ public function registerItemRecipeEvent(code func)
 public function getItemRecipeEventTrigger() returns trigger
     return eventTrigger
 
-function fireEvent(ItemRecipe recipe, unit u, item itm, HashMap<int, RecipeIngredient> ingredients)
+function fireEvent(ItemRecipe recipe, unit u, item itm, HashList<RecipeIngredient> ingredients)
     ItemRecipe prevRecipe = eventRecipe
     unit prevUnit = eventUnit
     item prevItem = eventItem
@@ -286,14 +287,14 @@ public class ItemRecipe
     function addItem(int itemTypeId)
         addItem(itemTypeId, true, 0)
 
-    private function orderedSearch(LinkedList<item> items) returns HashMap<int, RecipeIngredient>
+    private function orderedSearch(LinkedList<item> items) returns HashList<RecipeIngredient>
         int slot = 0
         boolean found
         item itm
         int charges
         RecipeIngredient ingredient
         int idx
-        let resultIngredients = new HashMap<int, RecipeIngredient>()
+        let resultIngredients = new HashList<RecipeIngredient>()
 
         let iter = ingredients.iterator()..next()
         while iter.current != iter.dummy // test() validated this.count against items size already
@@ -305,7 +306,7 @@ public class ItemRecipe
 
             while ingredient.index == idx // treats each part of recipe as possible batch
                 if itm.getTypeId() == ingredient.itemTypeId and charges >= ingredient.charges
-                    resultIngredients.put(slot, new RecipeIngredient(ingredient))
+                    resultIngredients.set(slot, new RecipeIngredient(ingredient))
                     found = true
                     break
 
@@ -326,7 +327,7 @@ public class ItemRecipe
         iter.close()
         return resultIngredients
 
-    private function unorderedSearch(LinkedList<item> items) returns HashMap<int, RecipeIngredient>
+    private function unorderedSearch(LinkedList<item> items) returns HashList<RecipeIngredient>
         boolean found
         RecipeIngredient ingredient
         int idx
@@ -335,7 +336,7 @@ public class ItemRecipe
         item itm
         int itemTypeId
         int charges
-        let resultIngredients = new HashMap<int, RecipeIngredient>()
+        let resultIngredients = new HashList<RecipeIngredient>()
 
         let iter = ingredients.iterator()..next()
         while iter.current != iter.dummy
@@ -347,13 +348,13 @@ public class ItemRecipe
             while ingredient.index == idx
                 slot = 0
                 while slot < size
-                    if not resultIngredients.has(slot)
+                    if not resultIngredients.get(slot) == null
                         itm = items.get(slot)
                         itemTypeId = itm.getTypeId()
                         charges = itm.getCharges()
 
                         if itemTypeId == ingredient.itemTypeId and charges >= ingredient.charges
-                            resultIngredients.put(slot, new RecipeIngredient(ingredient))
+                            resultIngredients.set(slot, new RecipeIngredient(ingredient))
                             found = true
                             break
                     slot++
@@ -377,7 +378,7 @@ public class ItemRecipe
         return resultIngredients
 
     /** Checks if recipe can be assembled for specified unit given the ingredients list. */
-    function test(unit whichUnit, LinkedList<item> items) returns HashMap<int, RecipeIngredient>
+    function test(unit whichUnit, LinkedList<item> items) returns HashList<RecipeIngredient>
         if count <= 0 or count > items.size()
             return null
         if requirement != null and not requirement.filter(whichUnit)
@@ -388,14 +389,14 @@ public class ItemRecipe
         return unorderedSearch(items)
 
     /** Checks if recipe can be assembled for specified unit. */
-    function test(unit whichUnit) returns HashMap<int, RecipeIngredient>
+    function test(unit whichUnit) returns HashList<RecipeIngredient>
         int size = whichUnit.inventorySize()
         let items = new LinkedList<item>()
 
         for slot = 0 to size - 1
             items.push(whichUnit.itemInSlot(slot))
 
-        HashMap<int, RecipeIngredient> result = test(whichUnit, items)
+        HashList<RecipeIngredient> result = test(whichUnit, items)
         destroy items
         return result
 
@@ -416,8 +417,8 @@ public class ItemRecipe
         fireEvent(this, whichUnit, itm, resultIngredients)
 
         for i = 0 to size - 1
-            if resultIngredients.has(i)
-                ingredient = resultIngredients.get(i)
+            ingredient = resultIngredients.get(i)
+            if ingredient != null
                 itm = fromItems.get(i)
                 if ingredient.charges > 0
                     chrgs = itm.getCharges()
