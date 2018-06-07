@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.2.1
+*  ItemRecipe v1.0.2.2
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -410,6 +410,11 @@ public class ItemRecipe
         if resultIngredients == null
             return false
 
+        itm = CreateItem(reward, whichUnit.getX(), whichUnit.getY())
+        if charges > 0
+            itm.setCharges(charges)
+        fireEvent(this, whichUnit, itm, resultIngredients)
+
         for i = 0 to size - 1
             if resultIngredients.has(i)
                 ingredient = resultIngredients.get(i)
@@ -422,13 +427,7 @@ public class ItemRecipe
                         itm.remove()
                 else if ingredient.perishable
                     itm.remove()
-
-        itm = CreateItem(reward, whichUnit.getX(), whichUnit.getY())
-        if charges > 0
-            itm.setCharges(charges)
         whichUnit.addItemHandle(itm)
-
-        fireEvent( this, whichUnit, itm, resultIngredients)
 
         destroy resultIngredients
         return true
