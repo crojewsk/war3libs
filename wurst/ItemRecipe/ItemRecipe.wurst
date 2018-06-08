@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.2.3
+*  ItemRecipe v1.0.3.0
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -13,31 +13,27 @@ import ItemRestriction
 import InventoryEvent
 import SmoothItemPickup
 
-// Global containers for associated recipe list retrieval
-let recipeMap = new HashMap<int, LinkedList<ItemRecipe>>()
-// Event related globals
-ItemRecipe eventRecipe = null
-unit eventUnit = null
-item eventItem = null
-LinkedList<item> eventIngredients = null
-trigger eventTrigger = CreateTrigger()
+tuple eventInfo(ItemRecipe recipe, unit u, item itm, LinkedList<item> ingredients)
+
+var eventState = eventInfo(null, null, null, null)
+constant eventTrigger = CreateTrigger()
 
 /** Returns triggering item recipe. */
 public function getEventItemRecipe() returns ItemRecipe
-    return eventRecipe
+    return eventState.recipe
 
 /** Returns recipe triggering unit. */
 public function getEventItemRecipeUnit() returns unit
-    return eventUnit
+    return eventState.u
 
 /** Returns reward item for triggering recipe. */
 public function getEventItemRecipeItem() returns item
-    return eventItem
+    return eventState.itm
 
 /** Returns collection of ingredients chosen to assemble the reward item,
     where each index corresponds to triggering unit inventory slot. */
 public function getEventItemRecipeIngredients() returns LinkedList<item>
-    return eventIngredients
+    return eventState.ingredients
 
 /** Registers new event handler for item recipe event. */
 public function registerItemRecipeEvent(code func)
@@ -47,23 +43,11 @@ public function registerItemRecipeEvent(code func)
 public function getItemRecipeEventTrigger() returns trigger
     return eventTrigger
 
-function fireEvent(ItemRecipe recipe, unit u, item itm, LinkedList<item> ingredients)
-    ItemRecipe prevRecipe = eventRecipe
-    unit prevUnit = eventUnit
-    item prevItem = eventItem
-    let prevIngredients = eventIngredients
-
-    eventRecipe = recipe
-    eventUnit = u
-    eventItem = itm
-    eventIngredients = ingredients
-
+function fireEvent(eventInfo currState)
+    var prevState = eventState
+    eventState = currState
     eventTrigger.evaluate()
-
-    eventRecipe = prevRecipe
-    eventUnit = prevUnit
-    eventItem = prevItem
-    eventIngredients = prevIngredients
+    eventState = prevState
 
 /** Stores information about item required for recipe assembly. */
 public class RecipeIngredient
@@ -78,7 +62,7 @@ public class RecipeIngredient
         this.perishable = perishable
         this.charges = charges
         this.index = index
-    
+
     construct(thistype base)
         this.itemTypeId = base.itemTypeId
         this.perishable = base.perishable
@@ -87,16 +71,51 @@ public class RecipeIngredient
 
 /** Item recipe, collection of items that can be combined for powerful rewards. */
 public class ItemRecipe
-    private LinkedList<RecipeIngredient> ingredients
-    private int reward
     int charges
     boolean ordered
     boolean permanent
     boolean pickupable
     UnitRequirement requirement
+
+    private LinkedList<RecipeIngredient> ingredients
+    private int reward
     private int abilityId
     private int count
     private boolean batch
+    // Global containers for associated recipe list retrieval
+    private static constant recipeMap = new HashMap<int, LinkedList<ItemRecipe>>()
+
+    private static function saveRecipe(int index, ItemRecipe recipe)
+        if not recipeMap.has(index)
+            recipeMap.put(index, new LinkedList<ItemRecipe>())
+        var recipes = recipeMap.get(index)
+        if not recipes.contains(recipe)
+            recipes.push(recipe)
+
+    private static function flushRecipe(int index, ItemRecipe recipe)
+        var recipes = recipeMap.get(index)
+        recipes.remove(recipe)
+        if recipes.isEmpty()
+            destroy recipes
+            recipeMap.remove(index)
+
+    private static function getRecipes(int index) returns LinkedList<ItemRecipe>
+        LinkedList<ItemRecipe> result = null
+        if recipeMap.has(index)
+            result = recipeMap.get(index)
+        return result
+
+    /** Returns recipes which reward matches specified item type. */
+    static function getRecipesForReward(int itemTypeId) returns LinkedList<ItemRecipe>
+        return getRecipes(-itemTypeId)
+
+    /** Returns recipes that specified item is part of. */
+    static function getRecipesWithIngredient(int itemTypeId) returns LinkedList<ItemRecipe>
+        return getRecipes(itemTypeId)
+
+    /** Returns recipes that can be assembled by casting specified ability. */
+    static function getRecipesForAbility(int abilityId) returns LinkedList<ItemRecipe>
+        return getRecipes(abilityId)
 
     construct(int reward, int charges, boolean ordered, boolean permanent, boolean pickupable)
         ingredients = new LinkedList<RecipeIngredient>()
@@ -109,82 +128,38 @@ public class ItemRecipe
         abilityId = 0
         count = 0
         batch = false
-
-        LinkedList<ItemRecipe> recipes
-        if not recipeMap.has(-reward)
-            recipes = new LinkedList<ItemRecipe>()
-            recipes.push(this)
-            recipeMap.put(-reward, recipes)
-        else
-            recipes = recipeMap.get(-reward)
-            if not recipes.contains(this)
-                recipes.push(this)
+        saveRecipe(-reward, this)
 
     ondestroy
-        LinkedList<ItemRecipe> recipes
-        int itemTypeId
-
         setAbility(0)
-
-        for ingredient in ingredients
-            itemTypeId = ingredient.itemTypeId
-            recipes = recipeMap.get(itemTypeId)
-            recipes.remove(this)
-            if recipes.isEmpty()
-                destroy recipes
-                recipeMap.remove(itemTypeId)
-
-        recipes = recipeMap.get(-reward)
-        recipes.remove(this)
-        if recipes.isEmpty()
-            destroy recipes
-            recipeMap.remove(-reward)
-
+        ingredients.forEach(e -> flushRecipe(e.itemTypeId, this))
+        flushRecipe(-reward, this)
         destroy ingredients
 
     /** Number of items required for the recipe. */
     function count() returns int
         return count
 
-    /** Whether specified item type is a part of the recipe. */
-    function isIngredient(int itemTypeId) returns boolean
-        for ingredient in ingredients
-            if ingredient.itemTypeId == itemTypeId
-                return true
-        return false
-
     /** Returns shallow copy of item recipe data. */
     function getIngredients() returns LinkedList<RecipeIngredient>
-        return new LinkedList<RecipeIngredient>(ingredients)
+        return ingredients.copy()
 
     /** Returns reward item type. */
-    function getResult() returns int
+    function getReward() returns int
         return reward
 
-    /** Returns recipes which reward matches specified item type. */
-    static function getRecipes(int itemTypeId) returns LinkedList<ItemRecipe>
-        if recipeMap.has(-itemTypeId)
-            return recipeMap.get(-itemTypeId)
-        return null
+    /** Retrieves id of ability thats triggers assembly of this recipe. */
+    function getAbility() returns int
+        return abilityId
 
-    /** Returns first recipe which reward matches specified item type. */
-    static function getRecipe(int itemTypeId) returns ItemRecipe
-        let recipes = getRecipes(itemTypeId)
-        if recipes != null
-            return recipes.getFirst()
-        return null
-
-    /** Returns recipes that specified item is part of. */
-    static function getRecipesForIngredient(int itemTypeId) returns LinkedList<ItemRecipe>
-        if recipeMap.has(itemTypeId)
-            return recipeMap.get(itemTypeId)
-        return null
-
-    /** Returns recipes that can be assembled by casting specified ability. */
-    static function getRecipesForAbility(int abilityId) returns LinkedList<ItemRecipe>
-        if recipeMap.has(abilityId)
-            return recipeMap.get(abilityId)
-        return null
+    /** Whether specified item type is a part of the recipe. */
+    function isIngredient(int itemTypeId) returns boolean
+        var result = false
+        for ingredient in ingredients
+            if ingredient.itemTypeId == itemTypeId
+                result = true
+                break
+        return result
 
     /** Starts single-reference counted batch. Allows to assign multiple items to the same item slot. */
     function startBatch()
@@ -197,328 +172,253 @@ public class ItemRecipe
             batch = false
             count++
 
-    /** Retrieves id of ability thats triggers assembly of this recipe. */
-    function getAbility() returns int
-        return abilityId
-
     /** Sets or removes specified ability from triggering recipe assembly. */
     function setAbility(int abilityId)
-        LinkedList<ItemRecipe> recipes
-
-        if this.abilityId == abilityId
-            return
-
-        if this.abilityId != 0
-            recipes = recipeMap.get(this.abilityId)
-            recipes.remove(this)
-            if recipes.isEmpty()
-                destroy recipes
-                recipeMap.remove(this.abilityId)
-
-        if abilityId > 0
-            this.abilityId = abilityId
-            if not recipeMap.has(abilityId)
-                recipes = new LinkedList<ItemRecipe>()
-                recipes.push(this)
-                recipeMap.put(abilityId, recipes)
-            else
-                recipes = recipeMap.get(abilityId)
-                if not recipes.contains(this)
-                    recipes.push(this)
+        if this.abilityId != abilityId
+            if this.abilityId != 0
+                flushRecipe(abilityId, this)
+            if abilityId > 0
+                this.abilityId = abilityId
+                saveRecipe(abilityId, this)
 
     /** Removes all entries that match specified item type from recipe ingredient list. */
     function removeItem(int itemTypeId)
-        if batch // removing item when batch is ongoing is forbidden
-            return
+        if not batch // removing item when batch is ongoing is forbidden
+            var iter = ingredients.iterator()
+            var found = false
 
-        let iter = ingredients.iterator()
-        boolean found = false
-
-        while iter.hasNext()
-            if iter.next().itemTypeId == itemTypeId
-                var entry = iter.current
-                var ingredient = entry.elem
-
-                // Decrement count only if this item is not part of any batch
-                if (entry.prev == iter.dummy or entry.prev.elem.index != ingredient.index) and
-                   (entry.next == iter.dummy or entry.next.elem.index != ingredient.index)
-                    count--
-
-                iter.remove()
-                found = true
-                break
-        iter.close()
-
-        if found
-            let recipes = recipeMap.get(itemTypeId)
-            recipes.remove(this)
-            if recipes.isEmpty()
-                destroy recipes
-                recipeMap.remove(itemTypeId)
+            for ingredient from iter
+                if ingredient.itemTypeId == itemTypeId
+                    var entry = iter.current
+                    // Decrement count only if this item is not part of any batch
+                    if (entry.prev == iter.dummy or entry.prev.elem.index != ingredient.index) and
+                       (entry.next == iter.dummy or entry.next.elem.index != ingredient.index)
+                        count--
+                    iter.remove()
+                    found = true
+            iter.close()
+            if found
+                flushRecipe(itemTypeId, this)
 
     /** Adds new entry to recipe ingredient list. */
-    function addItem(int itemTypeId, boolean remove, int charges)
-        LinkedList<ItemRecipe> recipes
-        int chrgs = charges
-
-        if itemTypeId <= 0 or itemTypeId == reward
-            return
-        if count >= bj_MAX_INVENTORY and not batch
-            return
-
-        if not recipeMap.has(itemTypeId)
-            recipes = new LinkedList<ItemRecipe>()
-            recipes.push(this)
-            recipeMap.put(itemTypeId, recipes)
-        else
-            recipes = recipeMap.get(itemTypeId)
-            if not recipes.contains(this)
-                recipes.push(this)
-
-        if chrgs < 0
-            chrgs = 0
-
-        let ingredient = new RecipeIngredient(itemTypeId, remove, chrgs, count)
-        ingredients.push(ingredient)
-        if not batch
-            count++
+    function addItem(int itemTypeId, boolean perishable, int charges)
+        if itemTypeId != reward
+            var ingredient = new RecipeIngredient(itemTypeId, perishable, max(charges, 0), count)
+            ingredients.push(ingredient)
+            if not batch
+                count++
+            saveRecipe(itemTypeId, this)
 
     /** Adds new entry to recipe ingredient list. */
     function addItem(int itemTypeId)
         addItem(itemTypeId, true, 0)
 
     private function orderedSearch(LinkedList<item> items) returns HashList<RecipeIngredient>
-        int slot = 0
-        boolean found
-        item itm
-        int charges
-        RecipeIngredient ingredient
-        int idx
-        let resultIngredients = new HashList<RecipeIngredient>()
+        var result = new HashList<RecipeIngredient>
+        var iter = ingredients.iterator()
+        var slot = 0
 
-        let iter = ingredients.iterator()..next()
-        while iter.current != iter.dummy // test() validated this.count against items size already
-            found = false
-            itm = items.get(slot)
-            charges = itm.getCharges()
-            ingredient = iter.current.elem
-            idx = ingredient.index
+        while iter.hasNext() // test() validated this.count against items size already
+            var found = false
+            var ingredient = iter.next()
+            var idx = ingredient.index
+            var itm = items.get(slot)
+            var charges = itm.getCharges()
 
             while ingredient.index == idx // treats each part of recipe as possible batch
                 if itm.getTypeId() == ingredient.itemTypeId and charges >= ingredient.charges
-                    resultIngredients.set(slot, new RecipeIngredient(ingredient))
+                    result.set(slot, new RecipeIngredient(ingredient))
                     found = true
                     break
-
-                if iter..next().current == iter.dummy
+                if not iter.hasNext()
                     break
-                ingredient = iter.current.elem
+                ingredient = iter.next()
 
             if not found
-                destroy resultIngredients
-                iter.close()
-                return null
-            else // seek node which is not part of this batch
-                while ingredient.index == idx
-                    if iter..next().current == iter.dummy
-                        break // batch was the last piece of recipe
-                    ingredient = iter.current.elem
+                destroy result
+                result = null
+                break
+            // Seek node which is not part of this batch
+            while iter.hasNext()
+                if iter.lookahead().index != idx
+                    break // batch was the last piece of recipe
+                iter.next()
             slot++
         iter.close()
-        return resultIngredients
+        return result
 
     private function unorderedSearch(LinkedList<item> items) returns HashList<RecipeIngredient>
-        boolean found
-        RecipeIngredient ingredient
-        int idx
-        int slot
-        int size = items.size()
-        item itm
-        int itemTypeId
-        int charges
-        let resultIngredients = new HashList<RecipeIngredient>()
+        var result = new HashList<RecipeIngredient>()
+        var iter = ingredients.iterator()
+        var last = items.size() - 1
 
-        let iter = ingredients.iterator()..next()
-        while iter.current != iter.dummy
-            found = false
-            ingredient = iter.current.elem
-            idx = ingredient.index
+        while iter.hasNext()
+            var found = false
+            var ingredient = iter.next()
+            var idx = ingredient.index
 
             // Attempt to find any matching items from given batch within items collection
             while ingredient.index == idx
-                slot = 0
-                while slot < size
-                    if not resultIngredients.get(slot) == null
-                        itm = items.get(slot)
-                        itemTypeId = itm.getTypeId()
-                        charges = itm.getCharges()
+                for slot = 0 to last
+                    if result.get(slot) == null
+                        var itm = items.get(slot)
+                        var itemTypeId = itm.getTypeId()
+                        var charges = itm.getCharges()
 
                         if itemTypeId == ingredient.itemTypeId and charges >= ingredient.charges
-                            resultIngredients.set(slot, new RecipeIngredient(ingredient))
+                            result.set(slot, new RecipeIngredient(ingredient))
                             found = true
                             break
-                    slot++
-
-                if found
+                if found or not iter.hasNext()
                     break
-                if iter..next().current == iter.dummy
-                    break
-                ingredient = iter.current.elem
+                ingredient = iter.next()
 
             if not found
-                destroy resultIngredients
-                iter.close()
-                return null
-            else // seek node which is not part of this batch
-                while ingredient.index == idx
-                    if iter..next().current == iter.dummy
-                        break // batch was the last piece of recipe
-                    ingredient = iter.current.elem
+                destroy result
+                result = null
+                break
+            // Seek node which is not part of this batch
+            while iter.hasNext()
+                if iter.lookahead().index != idx
+                    break // batch was the last piece of recipe
+                iter.next()
         iter.close()
-        return resultIngredients
+        return result
 
     /** Checks if recipe can be assembled for specified unit given the ingredients list. */
     function test(unit whichUnit, LinkedList<item> items) returns HashList<RecipeIngredient>
-        if count <= 0 or count > items.size()
-            return null
-        if requirement != null and not requirement.filter(whichUnit)
-            return null
+        HashList<RecipeIngredient> result = null
 
-        if ordered
-            return orderedSearch(items)
-        return unorderedSearch(items)
+        if count > 0 and items.size() >= count
+            if requirement == null or requirement.filter(whichUnit)
+                if ordered
+                    result = orderedSearch(items)
+                else
+                    result = unorderedSearch(items)
+        return result
 
     /** Checks if recipe can be assembled for specified unit. */
     function test(unit whichUnit) returns HashList<RecipeIngredient>
-        int size = whichUnit.inventorySize()
-        let items = new LinkedList<item>()
+        var last = whichUnit.inventorySize() - 1
+        var items = new LinkedList<item>()
 
-        for slot = 0 to size - 1
+        for slot = 0 to last
             items.push(whichUnit.itemInSlot(slot))
+        var result = test(whichUnit, items)
 
-        HashList<RecipeIngredient> result = test(whichUnit, items)
         destroy items
         return result
 
     /** Attempts to assemble recipe for specified unit given the ingredients list. */
     function assemble(unit whichUnit, LinkedList<item> fromItems) returns boolean
-        int size = fromItems.size()
-        RecipeIngredient ingredient
-        item itm
-        int chrgs
-
-        let resultIngredients = test(whichUnit, fromItems)
-        if resultIngredients == null
+        var fromIngredients = test(whichUnit, fromItems)
+        if fromIngredients == null
             return false
 
-        itm = CreateItem(reward, whichUnit.getX(), whichUnit.getY())
+        var rewardItm = createItem(reward, whichUnit.getPos())
         if charges > 0
-            itm.setCharges(charges)
+            rewardItm.setCharges(charges)
 
         var usedItems = new LinkedList<item>()
-        for i = 0 to resultIngredients.size() - 1
-            if resultIngredients.get(i) != null
+        var last = fromItems.size() - 1
+        for i = 0 to last
+            if fromIngredients.get(i) != null
                 usedItems.push(fromItems.get(i))
-        fireEvent(this, whichUnit, itm, usedItems)
 
-        for i = 0 to size - 1
-            ingredient = resultIngredients.get(i)
+        fireEvent(eventInfo(this, whichUnit, rewardItm, usedItems))
+
+        for i = 0 to last
+            var ingredient = fromIngredients.get(i)
             if ingredient != null
-                itm = fromItems.get(i)
+                var itm = fromItems.get(i)
                 if ingredient.charges > 0
-                    chrgs = itm.getCharges()
-                    if chrgs > ingredient.charges and not ingredient.perishable
-                        itm.setCharges(chrgs - ingredient.charges)
+                    if itm.getCharges() > ingredient.charges and not ingredient.perishable
+                        itm.setCharges(itm.getCharges() - ingredient.charges)
                     else
                         itm.remove()
                 else if ingredient.perishable
                     itm.remove()
-        whichUnit.addItemHandle(itm)
+        whichUnit.addItemHandle(rewardItm)
 
-        destroy resultIngredients
+        destroy fromIngredients
+        destroy usedItems
         return true
 
     /** Attempts to assemble recipe for specified unit. */
     function assemble(unit whichUnit) returns boolean
-        int size = whichUnit.inventorySize()
-        let items = new LinkedList<item>()
+        var last = whichUnit.inventorySize() - 1
+        var items = new LinkedList<item>()
 
-        for slot = 0 to size - 1
+        for slot = 0 to last
             items.push(whichUnit.itemInSlot(slot))
+        var result = assemble(whichUnit, items)
 
-        boolean result = assemble(whichUnit, items)
         destroy items
         return result
 
     /** Reverts the assembly, removing the reward item and returning all ingredients to specified unit. */
-    function disassemble(unit whichUnit) returns boolean
-        int size = whichUnit.inventorySize()
-        boolean found = false
-        item itm = null
-
+    function disassemble(unit whichUnit) returns boolean        
         if permanent
             return false
+        var last = whichUnit.inventorySize() - 1
+        var result = false
 
-        for slot = 0 to size - 1
-            itm = whichUnit.itemInSlot(slot)
+        for slot = 0 to last
+            var itm = whichUnit.itemInSlot(slot)
             if itm.getTypeId() == reward
-                found = true
-                break
-        if not found
-            return false
+                itm.remove()
 
-        itm.remove()
-        for ingredient in ingredients
-            if ingredient.perishable
-                itm = CreateItem(ingredient.itemTypeId, whichUnit.getX(), whichUnit.getY())
-                if ingredient.charges > 0
-                    itm.setCharges(ingredient.charges)
-                whichUnit.addItemHandle(itm)
-        return true
+                for ingredient in ingredients
+                    if ingredient.perishable
+                        itm = createItem(ingredient.itemTypeId, whichUnit.getPos())
+                        if ingredient.charges > 0
+                            itm.setCharges(ingredient.charges)
+                        whichUnit.addItemHandle(itm)
+                result = true
+                break
+        return result
 
 /** Attempts to assemble specified item type for provided unit. */
 public function unit.assembleItem(int itemTypeId) returns boolean
-    let recipes = ItemRecipe.getRecipes(itemTypeId)
+    var result = false
+    var recipes = ItemRecipe.getRecipesForReward(itemTypeId)
     if recipes != null
         for recipe in recipes
             if recipe.assemble(this)
-                return true
-    return false
+                result = true
+                break
+    return result
 
 /** Reverts the assembly, removing the reward item and returning all ingredients to specified unit. */
 public function unit.disassembleItem(item whichItem) returns boolean
-    int itemTypeId = whichItem.getTypeId()
-    let recipes = ItemRecipe.getRecipes(itemTypeId)
-
-    if not this.hasItem(whichItem) or recipes == null
-        return false
-    // Disassembling item with multiple recipe variants is ambiguous
-    if recipes.size() > 1
-        return false
-
-    return recipes.getFirst().disassemble(this)
+    var result = false
+    if this.hasItem(whichItem)
+        var recipes = ItemRecipe.getRecipesForReward(whichItem.getTypeId())
+        // Disassembling item with multiple recipe variants is ambiguous
+        if recipes != null and recipes.size() == 1
+            result = recipes.getFirst().disassemble(this)
+    return result
 
 function onPickup()
-    unit u = GetTriggerUnit()
-    item itm = GetManipulatedItem()
-    int itemTypeId = itm.getTypeId()
-    let recipes = ItemRecipe.getRecipesForIngredient(itemTypeId)
+    var itemTypeId = GetManipulatedItem().getTypeId()
+    var recipes = ItemRecipe.getRecipesWithIngredient(itemTypeId)
 
     if recipes != null
+        var u = GetTriggerUnit()
         for recipe in recipes
             if recipe.pickupable and recipe.assemble(u)
                 break
 
 function onMoved()
-    unit u = getInventoryManipulatingUnit()
-    item itm = getInventoryManipulatedItem()
-    int itemTypeId = itm.getTypeId()
-    let recipes = ItemRecipe.getRecipesForIngredient(itemTypeId)
-    int size = u.inventorySize()
+    var itm = getInventoryManipulatedItem()
+    var recipes = ItemRecipe.getRecipesWithIngredient(itm.getTypeId())
 
     if recipes != null
-        let items = new LinkedList<item>()
-        for slot = 0 to size - 1
+        var u = getInventoryManipulatingUnit()
+        var last = u.inventorySize() - 1
+        var items = new LinkedList<item>()
+
+        for slot = 0 to last
             items.push(u.itemInSlot(slot))
         items.set(getInventorySlotFrom(), getInventorySwappedItem())
         items.set(getInventorySlotTo(), itm)
@@ -529,32 +429,27 @@ function onMoved()
         destroy items
 
 function onCast()
-    unit u = GetTriggerUnit()
-    int abilityId = GetSpellAbilityId()
-    let recipes = ItemRecipe.getRecipesForAbility(abilityId)
-
+    var recipes = ItemRecipe.getRecipesForAbility(GetSpellAbilityId())
     if recipes != null
+        var u = GetTriggerUnit()
         for recipe in recipes
             if recipe.assemble(u)
                 break
 
 function getCheatRecipe(unit u, item itm) returns ItemRecipe
-    int itemTypeId = itm.getTypeId()
-    let recipes = ItemRecipe.getRecipesForIngredient(itemTypeId)
-
+    var recipes = ItemRecipe.getRecipesWithIngredient(itm.getTypeId())
     if recipes == null
         return null
 
-    let size = u.inventorySize()
-    let items = new LinkedList<item>()
-
-    for slot = 0 to size - 1
+    var last = u.inventorySize() - 1
+    var items = new LinkedList<item>()
+    for slot = 0 to last
         items.push(u.itemInSlot(slot))
     items.push(itm)
 
     for recipe in recipes
         if recipe.pickupable and not recipe.ordered
-            let ingredients = recipe.getIngredients()
+            var ingredients = recipe.getIngredients()
             for ingredient in ingredients
                 // At least one item has to removed, in order to fit recipe reward in
                 if ingredient.perishable and recipe.test(u, items) != null
@@ -562,20 +457,18 @@ function getCheatRecipe(unit u, item itm) returns ItemRecipe
     return null
 
 function onSmoothPickup()
-    unit u = getSmoothItemPickupUnit()
-    item itm = getSmoothItemPickupItem()
-    let recipe = getCheatRecipe(u, itm)
+    var u = getSmoothItemPickupUnit()
+    var itm = getSmoothItemPickupItem()
+    var recipe = getCheatRecipe(u, itm)
 
-    if recipe == null
-        return
+    if recipe != null
+        var last = u.inventorySize() - 1
+        var items = new LinkedList<item>()
 
-    let size = u.inventorySize()
-    let items = new LinkedList<item>()
-
-    for slot = 0 to size - 1
-        items.push(u.itemInSlot(slot))
-    items.push(itm)
-    recipe.assemble(u, items)
+        for slot = 0 to last
+            items.push(u.itemInSlot(slot))
+        items.push(itm)
+        recipe.assemble(u, items)
 
 class RecipeSmoothPickupPredicate implements SmoothPickupPredicate
     function canPickup(unit whichUnit, item whichItem) returns boolean

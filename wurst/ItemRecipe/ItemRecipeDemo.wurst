@@ -7,7 +7,7 @@ class NoTrollsAlive implements UnitRequirementPredicate
         return GetFilterUnit().getTypeId() == 'ndtb' and GetFilterUnit().isAlive() // Spitting Spider
 
     function isMet(unit _whichUnit) returns string
-        group g = CreateGroup()
+        var g = CreateGroup()
         string result = null
 
         g.enumUnitsInRect(bj_mapInitialPlayableArea, Filter(function filter))
