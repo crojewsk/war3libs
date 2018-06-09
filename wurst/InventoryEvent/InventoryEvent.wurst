@@ -1,5 +1,5 @@
 /*
-*  InventoryEvent v1.0.1.3
+*  InventoryEvent v1.0.1.4
 *     by Bannar
 *
 *  For intuitive inventory event handling.
@@ -38,13 +38,6 @@ public function getInventorySlotTo() returns int
 public function getInventorySwappedItem() returns item
     return eventData.u.itemInSlot(eventData.slotTo)
 
-public function registerInventoryEvent(EVENT_ITEM_INVENTORY whichEvent, code func)
-    switch whichEvent
-        case EVENT_ITEM_INVENTORY.MOVE
-            eventMovedTrigger.addCondition(Condition(func))
-        case EVENT_ITEM_INVENTORY.USE
-            eventUsedTrigger.addCondition(Condition(func))
-
 public function getInventoryEventTrigger(EVENT_ITEM_INVENTORY whichEvent) returns trigger
     trigger result = null
 
@@ -54,6 +47,13 @@ public function getInventoryEventTrigger(EVENT_ITEM_INVENTORY whichEvent) return
         case EVENT_ITEM_INVENTORY.USE
             result = eventUsedTrigger
     return result
+
+public function registerInventoryEvent(EVENT_ITEM_INVENTORY whichEvent, code func)
+    switch whichEvent
+        case EVENT_ITEM_INVENTORY.MOVE
+            eventMovedTrigger.addCondition(Condition(func))
+        case EVENT_ITEM_INVENTORY.USE
+            eventUsedTrigger.addCondition(Condition(func))
 
 function fireEvent(trigger evt, eventState currState)
     var prevState = eventData
