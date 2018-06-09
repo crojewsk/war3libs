@@ -46,7 +46,7 @@ public function initItemRestrictionDemo()
     atLeastOneSpiderAlive.addCondition(new AtLeastOneSpiderAlive())
     spiderRing.requirement = atLeastOneSpiderAlive
 
-    tauren.units.push('Otch')
+    tauren.addUnit('Otch')
     weapon1h.addItem('desc')
     weapon2h.addItem('mlst')
     weapon2h.addExclusive(weapon1h)
