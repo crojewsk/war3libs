@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.3.0
+*  ItemRecipe v1.0.3.1
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -75,13 +75,13 @@ public class ItemRecipe
     boolean ordered
     boolean permanent
     boolean pickupable
-    UnitRequirement requirement
+    UnitRequirement requirement = null
 
-    private LinkedList<RecipeIngredient> ingredients
+    private constant ingredients = new LinkedList<RecipeIngredient>()
     private int reward
-    private int abilityId
-    private int count
-    private boolean batch
+    private var abilityId = 0
+    private var count = 0
+    private var batch = false
     // Global containers for associated recipe list retrieval
     private static constant recipeMap = new HashMap<int, LinkedList<ItemRecipe>>()
 
@@ -114,20 +114,15 @@ public class ItemRecipe
         return getRecipes(itemTypeId)
 
     /** Returns recipes that can be assembled by casting specified ability. */
-    static function getRecipesForAbility(int abilityId) returns LinkedList<ItemRecipe>
+    static function getRecipesWithAbility(int abilityId) returns LinkedList<ItemRecipe>
         return getRecipes(abilityId)
 
     construct(int reward, int charges, boolean ordered, boolean permanent, boolean pickupable)
-        ingredients = new LinkedList<RecipeIngredient>()
         this.reward = reward
         this.charges = charges
         this.ordered = ordered
         this.permanent = permanent
         this.pickupable = pickupable
-        requirement = null
-        abilityId = 0
-        count = 0
-        batch = false
         saveRecipe(-reward, this)
 
     ondestroy
@@ -155,7 +150,7 @@ public class ItemRecipe
     /** Whether specified item type is a part of the recipe. */
     function isIngredient(int itemTypeId) returns boolean
         var result = false
-        for ingredient in ingredients
+        for ingredient from ingredients.staticItr()
             if ingredient.itemTypeId == itemTypeId
                 result = true
                 break
@@ -429,7 +424,7 @@ function onMoved()
         destroy items
 
 function onCast()
-    var recipes = ItemRecipe.getRecipesForAbility(GetSpellAbilityId())
+    var recipes = ItemRecipe.getRecipesWithAbility(GetSpellAbilityId())
     if recipes != null
         var u = GetTriggerUnit()
         for recipe in recipes
@@ -447,14 +442,16 @@ function getCheatRecipe(unit u, item itm) returns ItemRecipe
         items.push(u.itemInSlot(slot))
     items.push(itm)
 
+    ItemRecipe result = null
     for recipe in recipes
         if recipe.pickupable and not recipe.ordered
-            var ingredients = recipe.getIngredients()
-            for ingredient in ingredients
+            for ingredient in recipe.getIngredients()
                 // At least one item has to removed, in order to fit recipe reward in
                 if ingredient.perishable and recipe.test(u, items) != null
-                    return recipe
-    return null
+                    result = recipe
+                    break
+    destroy items
+    return result
 
 function onSmoothPickup()
     var u = getSmoothItemPickupUnit()
@@ -470,7 +467,7 @@ function onSmoothPickup()
         items.push(itm)
         recipe.assemble(u, items)
 
-class RecipeSmoothPickupPredicate implements SmoothPickupPredicate
+class SmoothRecipeAssemly implements SmoothPickupPredicate
     function canPickup(unit whichUnit, item whichItem) returns boolean
         return whichUnit.isInventoryFull() and getCheatRecipe(whichUnit, whichItem) != null
 
@@ -481,4 +478,4 @@ init
 
     // Allow for smooth pickup for pickup-type unordered recipes
     registerSmoothItemPickupEvent(() -> onSmoothPickup())
-    addSmoothItemPickupCondition(new RecipeSmoothPickupPredicate())
+    addSmoothItemPickupCondition(new SmoothRecipeAssemly())
