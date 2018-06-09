@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.3.1
+*  ItemRecipe v1.0.3.2
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -83,26 +83,26 @@ public class ItemRecipe
     private var count = 0
     private var batch = false
     // Global containers for associated recipe list retrieval
-    private static constant recipeMap = new HashMap<int, LinkedList<ItemRecipe>>()
+    private static constant instanceMap = new HashMap<int, LinkedList<ItemRecipe>>()
 
     private static function saveRecipe(int index, ItemRecipe recipe)
-        if not recipeMap.has(index)
-            recipeMap.put(index, new LinkedList<ItemRecipe>())
-        var recipes = recipeMap.get(index)
+        if not instanceMap.has(index)
+            instanceMap.put(index, new LinkedList<ItemRecipe>())
+        var recipes = instanceMap.get(index)
         if not recipes.contains(recipe)
             recipes.push(recipe)
 
     private static function flushRecipe(int index, ItemRecipe recipe)
-        var recipes = recipeMap.get(index)
+        var recipes = instanceMap.get(index)
         recipes.remove(recipe)
         if recipes.isEmpty()
             destroy recipes
-            recipeMap.remove(index)
+            instanceMap.remove(index)
 
     private static function getRecipes(int index) returns LinkedList<ItemRecipe>
         LinkedList<ItemRecipe> result = null
-        if recipeMap.has(index)
-            result = recipeMap.get(index)
+        if instanceMap.has(index)
+            result = instanceMap.get(index)
         return result
 
     /** Returns recipes which reward matches specified item type. */
