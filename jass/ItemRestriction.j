@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRestriction v1.1.2.0
+*    ItemRestriction v1.1.2.1
 *       by Bannar
 *
 *    For restricting or limiting items from being equipped.
@@ -34,6 +34,7 @@
 *       function GetLimitErrorMessage takes ItemRestriction restriction, integer limit returns string
 *       function GetExclusiveErrorMessage takes ItemRestriction first, ItemRestriction second returns string
 *       function GetForbiddenErrorMessage takes ItemRestriction restriction returns string
+*       function PrintErrorMessage takes player whichPlayer, string message returns nothing
 *
 ******************************************************************************
 *
