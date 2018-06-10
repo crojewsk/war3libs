@@ -1,5 +1,5 @@
 /*
-*  StackNSplit v1.1.1.8
+*  StackNSplit v1.1.1.9
 *     by Bannar
 *
 *  Easy item charges stacking and splitting.
@@ -389,7 +389,7 @@ function onMoved()
 function onSmoothPickup()
     pickupItem(getSmoothItemPickupUnit(), getSmoothItemPickupItem())
 
-class StackSmoothPickupPredicate implements SmoothPickupPredicate
+class SmoothChargesStack implements SmoothPickupPredicate
     function canPickup(unit whichUnit, item whichItem) returns boolean
         var itemTypeId = whichItem.getTypeId()
         var result = false
@@ -404,4 +404,4 @@ init
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickup())
     registerInventoryEvent(EVENT_ITEM_INVENTORY.MOVE, () -> onMoved())
     registerSmoothItemPickupEvent(() -> onSmoothPickup())
-    addSmoothItemPickupCondition(new StackSmoothPickupPredicate())
+    addSmoothItemPickupCondition(new SmoothChargesStack())
