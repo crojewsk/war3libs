@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.1.4
+*    ItemRecipe v1.1.2.0
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -79,6 +79,9 @@
 *        | readonly integer reward
 *        |    Reward item type.
 *        |
+*        | integer charges
+*        |    Number of charges to assign to reward item.
+*        |
 *        | boolean ordered
 *        |    Whether recipe is ordered or unordered item inventory slot wise.
 *        |
@@ -87,9 +90,6 @@
 *        |
 *        | boolean pickupable
 *        |    Whether recipe can be assembled when picking up items.
-*        |
-*        | integer charges
-*        |    Number of charges to assign to reward item.
 *        |
 *        | optional UnitRequirement requirement
 *        |    Criteria that unit needs to meet to assemble the recipe.
@@ -108,40 +108,36 @@
 *        |
 *        | static method operator [] takes thistype other returns thistype
 *        |    Copy contructor.
-*        |
 *
 *
 *       Access and modifiers:
 *
-*        | method isIngredient takes integer itemTypeId returns boolean
-*        |    Whether specified item type is a part of the recipe.
+*        | static method getRecipesForReward takes integer itemTypeId returns ItemRecipeList
+*        |    Returns recipes which reward matches specified item type.
+*        |
+*        | static method getRecipesWithIngredient takes integer itemTypeId returns ItemRecipeList
+*        |    Returns recipes that specified item is part of.
+*        |
+*        | static method getRecipesWithAbility takes integer abilityId returns ItemRecipeList
+*        |    Returns recipes that can be assembled by casting specified ability.
 *        |
 *        | method getIngredients takes nothing returns RecipeIngredientList
 *        |    Returns shallow copy of item recipe data.
 *        |
-*        | static method getRecipes takes integer itemTypeId returns ItemRecipeList
-*        |    Returns recipes which reward matches specified item type.
-*        |
-*        | static method getRecipe takes integer itemTypeId returns ItemRecipe
-*        |    Returns first recipe which reward matches specified item type.
-*        |
-*        | static method getRecipesForIngredient takes integer itemTypeId returns ItemRecipeList
-*        |    Returns recipes that specified item is part of.
-*        |
-*        | static method getRecipesForAbility takes integer abilityId returns ItemRecipeList
-*        |    Returns recipes that can be assembled by casting specified ability.
-*        |
-*        | method startBatch takes nothing returns thistype
-*        |    Starts single-reference counted batch. Allows to assign multiple items to the same item slot.
-*        |
-*        | method endBatch takes nothing returns thistype
-*        |    Closes current batch.
+*        | method isIngredient takes integer itemTypeId returns boolean
+*        |    Whether specified item type is a part of the recipe.
 *        |
 *        | method getAbility takes nothing returns integer
 *        |    Retrieves id of ability thats triggers assembly of this recipe.
 *        |
 *        | method setAbility takes integer abilityId returns thistype
 *        |    Sets or removes specified ability from triggering recipe assembly.
+*        |
+*        | method startBatch takes nothing returns thistype
+*        |    Starts single-reference counted batch. Allows to assign multiple items to the same item slot.
+*        |
+*        | method endBatch takes nothing returns thistype
+*        |    Closes current batch.
 *        |
 *        | method removeItem takes integer itemTypeId returns thistype
 *        |    Removes all entries that match specified item type from recipe ingredient list.
@@ -198,9 +194,9 @@ globals
     private ItemRecipe eventRecipe = 0
     private unit eventUnit = null
     private item eventItem = null
-    private RecipeIngredientVector eventIngredients = 0
+    private ItemVector eventIngredients = 0
 
-    private Table recipeMap
+    private Table instanceTable = 0
 endglobals
 
 function GetEventItemRecipe takes nothing returns ItemRecipe
@@ -215,15 +211,15 @@ function GetEventItemRecipeItem takes nothing returns item
     return eventItem
 endfunction
 
-function GetEventItemRecipeIngredients takes nothing returns RecipeIngredientVector
+function GetEventItemRecipeIngredients takes nothing returns ItemVector
     return eventIngredients
 endfunction
 
-private function FireEvent takes ItemRecipe recipe, unit u, item it, RecipeIngredientVector ingredients returns nothing
+private function FireEvent takes ItemRecipe recipe, unit u, item it, ItemVector ingredients returns nothing
     local ItemRecipe prevRecipe = eventRecipe
     local unit prevUnit = eventUnit
     local item prevItem = eventItem
-    local RecipeIngredientVector prevIngredients = eventIngredients
+    local ItemVector prevIngredients = eventIngredients
     local integer playerId = GetPlayerId(GetOwningPlayer(u))
 
     set eventRecipe = recipe
@@ -282,20 +278,59 @@ endstruct
 //! runtextmacro DEFINE_STRUCT_LIST("", "ItemRecipeList", "ItemRecipe")
 
 struct ItemRecipe extends array
-    private RecipeIngredientList ingredients
-    readonly integer reward
+    integer charges
     boolean ordered
     boolean permanent
     boolean pickupable
-    integer charges
-    readonly integer count
-    private integer abilityId
-    private boolean batch
 static if LIBRARY_ItemRestriction then
     UnitRequirement requirement
 endif
+    readonly integer reward
+    readonly integer count
+    private RecipeIngredientList ingredients
+    private integer abilityId
+    private boolean batch
 
     implement Alloc
+
+    private static method saveRecipe takes integer index, ItemRecipe recipe returns nothing
+        local ItemRecipeList recipes
+        if not instanceTable.has(index) then
+            set instanceTable[index] = ItemRecipeList.create()
+        endif
+        set recipes = instanceTable[index]
+        if recipes.find(recipe) == 0 then
+            call recipes.push(recipe)
+        endif
+    endmethod
+
+    private static method flushRecipe takes integer index, ItemRecipe recipe returns nothing
+        local ItemRecipeList recipes = instanceTable[index]
+        call recipes.erase(recipes.find(recipe))
+        if recipes.empty() then
+            call recipes.destroy()
+            call instanceTable.remove(index)
+        endif
+    endmethod
+
+    private static method getRecipes takes integer index returns ItemRecipeList
+        if instanceTable.has(index) then
+            return instanceTable[index]
+        endif
+        return 0
+    endmethod
+
+    static method getRecipesForReward takes integer itemTypeId returns ItemRecipeList
+        return getRecipes(-itemTypeId)
+    endmethod
+
+    static method getRecipesWithIngredient takes integer itemTypeId returns ItemRecipeList
+        return getRecipes(itemTypeId)
+    endmethod
+
+    static method getRecipesWithAbility takes integer abilityId returns ItemRecipeList
+        return getRecipes(abilityId)
+    endmethod
 
     static method create takes integer reward, integer charges, boolean ordered, boolean permanent, boolean pickupable returns thistype
         local thistype this = allocate()
@@ -313,17 +348,7 @@ endif
         set abilityId = 0
         set count = 0
         set batch = false
-
-        if not recipeMap.has(-reward) then
-            set recipes = ItemRecipeList.create()
-            call recipes.push(this)
-            set recipeMap[-reward] = recipes
-        else
-            set recipes = recipeMap[-reward]
-            if recipes.find(this) == 0 then
-                call recipes.push(this)
-            endif
-        endif
+        call saveRecipe(-reward, this)
 
         return this
     endmethod
@@ -333,32 +358,13 @@ endif
     endmethod
 
     method setAbility takes integer abilityId returns thistype
-        local ItemRecipeList recipes
-
-        if this.abilityId == abilityId then
-            return this
-        endif
-
-        if this.abilityId != 0 then
-            set recipes = recipeMap[this.abilityId]
-            call recipes.erase(recipes.find(this))
-            if recipes.empty() then
-                call recipes.destroy()
-                call recipeMap.remove(this.abilityId)
+        if this.abilityId != abilityId then
+            if this.abilityId != 0 then
+                call flushRecipe(abilityId, this)
             endif
-        endif
-
-        if abilityId > 0 then
-            set this.abilityId = abilityId
-            if not recipeMap.has(abilityId) then
-                set recipes = ItemRecipeList.create()
-                call recipes.push(this)
-                set recipeMap[abilityId] = recipes
-            else
-                set recipes = recipeMap[abilityId]
-                if recipes.find(this) == 0 then
-                    call recipes.push(this)
-                endif
+            if abilityId > 0 then
+                set this.abilityId = abilityId
+                call saveRecipe(abilityId, this)
             endif
         endif
 
@@ -371,27 +377,12 @@ endif
         local integer itemTypeId
 
         call setAbility(0)
-
         loop
             exitwhen iter == 0
-
-            set itemTypeId = iter.data.itemTypeId
-            set recipes = recipeMap[itemTypeId]
-            call recipes.erase(recipes.find(this))
-            if recipes.empty() then
-                call recipes.destroy()
-                call recipeMap.remove(itemTypeId)
-            endif
-
+            call flushRecipe(iter.data.itemTypeId, this)
             set iter = iter.next
         endloop
-
-        set recipes = recipeMap[-reward]
-        call recipes.erase(recipes.find(this))
-        if recipes.empty() then
-            call recipes.destroy()
-            call recipeMap.remove(-reward)
-        endif
+        call flushRecipe(-reward, this)
 
         call ingredients.destroy()
         call deallocate()
@@ -408,9 +399,13 @@ endif
         endloop
 
         set this.count = other.count
-        call this.setAbility(other.getAbility())
+        call this.setAbility(other.abilityId)
         set this.batch = other.batch
         return this
+    endmethod
+
+    method getIngredients takes nothing returns RecipeIngredientList
+        return RecipeIngredientList[ingredients]
     endmethod
 
     method isIngredient takes integer itemTypeId returns boolean
@@ -424,39 +419,6 @@ endif
             set iter = iter.next
         endloop
         return false
-    endmethod
-
-    method getIngredients takes nothing returns RecipeIngredientList
-        return RecipeIngredientList[ingredients]
-    endmethod
-
-    static method getRecipes takes integer itemTypeId returns ItemRecipeList
-        if recipeMap.has(-itemTypeId) then
-            return recipeMap[-itemTypeId]
-        endif
-        return 0
-    endmethod
-
-    static method getRecipe takes integer itemTypeId returns ItemRecipe
-        local ItemRecipeList recipes = getRecipes(itemTypeId)
-        if recipes != 0 then
-            return recipes.front()
-        endif
-        return 0
-    endmethod
-
-    static method getRecipesForIngredient takes integer itemTypeId returns ItemRecipeList
-        if recipeMap.has(itemTypeId) then
-            return recipeMap[itemTypeId]
-        endif
-        return 0
-    endmethod
-
-    static method getRecipesForAbility takes integer abilityId returns ItemRecipeList
-        if recipeMap.has(abilityId) then
-            return recipeMap[abilityId]
-        endif
-        return 0
     endmethod
 
     method startBatch takes nothing returns thistype
@@ -481,13 +443,11 @@ endif
     method removeItem takes integer itemTypeId returns thistype
         local RecipeIngredientListItem iter = ingredients.first
         local boolean found = false
-        local ItemRecipeList recipes
         local RecipeIngredient ingredient
 
         if batch then // removing item when batch is ongoing is forbidden
             return this
         endif
-
         loop
             exitwhen iter == 0
             if iter.data.itemTypeId == itemTypeId then
@@ -501,52 +461,26 @@ endif
 
                 call ingredients.erase(iter)
                 set found = true
-                exitwhen true
             endif
             set iter = iter.next
         endloop
 
         if found then
-            set recipes = recipeMap[itemTypeId]
-            call recipes.removeElem(this)
-            if recipes.empty() then
-                call recipes.destroy()
-                call recipeMap.remove(itemTypeId)
-            endif
+            call flushRecipe(itemTypeId, this)
         endif
-
         return this
     endmethod
 
     method addItem takes integer itemTypeId, boolean perishable, integer charges returns thistype
-        local ItemRecipeList recipes
         local RecipeIngredient ingredient
 
-        if itemTypeId <= 0 or itemTypeId == reward then
-            return this
-        elseif count >= bj_MAX_INVENTORY and not batch then
-            return this
-        endif
-
-        if not recipeMap.has(itemTypeId) then
-            set recipes = ItemRecipeList.create()
-            call recipes.push(this)
-            set recipeMap[itemTypeId] = recipes
-        else
-            set recipes = recipeMap[itemTypeId]
-            if recipes.find(this) == 0 then
-                call recipes.push(this)
+        if itemTypeId != reward then
+            set ingredient = RecipeIngredient.create(itemTypeId, perishable, IMaxBJ(charges, 0), count)
+            call ingredients.push(ingredient)
+            if not batch then
+                set count = count + 1
             endif
-        endif
-
-        if charges < 0 then
-            set charges = 0
-        endif
-
-        set ingredient = RecipeIngredient.create(itemTypeId, perishable, charges, count)
-        call ingredients.push(ingredient)
-        if not batch then
-            set count = count + 1
+            call saveRecipe(itemTypeId, this)
         endif
 
         return this
@@ -563,9 +497,9 @@ endif
         local integer charges
         local RecipeIngredient ingredient
         local integer idx
-        local RecipeIngredientVector resultIngredients = RecipeIngredientVector.create()
+        local RecipeIngredientVector result = RecipeIngredientVector.create()
         local RecipeIngredientListItem iter = ingredients.first
-        call resultIngredients.assign(items.size(), 0)
+        call result.assign(items.size(), 0)
 
         loop
             exitwhen iter == 0 // test() validated this.count against items size already
@@ -578,7 +512,7 @@ endif
             loop
                 exitwhen ingredient.index != idx // treats each part of recipe as possible batch
                 if GetItemTypeId(itm) == ingredient.itemTypeId and charges >= ingredient.charges then
-                    set resultIngredients[slot] = RecipeIngredient[ingredient]
+                    set result[slot] = RecipeIngredient[ingredient]
                     set found = true
                     exitwhen true
                 endif
@@ -589,23 +523,20 @@ endif
             endloop
 
             if not found then
-                call resultIngredients.destroy()
-                set itm = null
-                return 0
-            else // seek node which is not part of this batch
-                loop
-                    exitwhen ingredient.index != idx
-                    set iter = iter.next
-                    exitwhen iter == 0 // batch was the last piece of recipe
-                    set ingredient = iter.data
-                endloop
+                call result.destroy()
+                set result = 0
+                exitwhen true
             endif
-
+            // Seek node which is not part of this batch
+            loop
+                set iter = iter.next
+                exitwhen iter == 0 or iter.data.index != idx
+            endloop
             set slot = slot + 1
         endloop
 
         set itm = null
-        return resultIngredients
+        return result
     endmethod
 
     private method unorderedSearch takes ItemVector items returns RecipeIngredientVector
@@ -617,9 +548,9 @@ endif
         local item itm
         local integer itemTypeId
         local integer charges
-        local RecipeIngredientVector resultIngredients = RecipeIngredientVector.create()
+        local RecipeIngredientVector result = RecipeIngredientVector.create()
         local RecipeIngredientListItem iter = ingredients.first
-        call resultIngredients.assign(size, 0)
+        call result.assign(size, 0)
 
         loop
             exitwhen iter == 0
@@ -633,13 +564,13 @@ endif
                 set slot = 0
                 loop
                     exitwhen slot >= size
-                    if resultIngredients[slot] == 0 then
+                    if result[slot] == 0 then
                         set itm = items[slot]
                         set itemTypeId = GetItemTypeId(itm)
                         set charges = GetItemCharges(itm)
 
                         if GetItemTypeId(itm) == ingredient.itemTypeId and charges >= ingredient.charges then
-                            set resultIngredients[slot] = RecipeIngredient[ingredient]
+                            set result[slot] = RecipeIngredient[ingredient]
                             set found = true
                             exitwhen true
                         endif
@@ -654,25 +585,23 @@ endif
             endloop
 
             if not found then
-                call resultIngredients.destroy()
-                set itm = null
-                return 0
-            else // seek node which is not part of this batch
-                loop
-                    exitwhen ingredient.index != idx
-                    set iter = iter.next
-                    exitwhen iter == 0 // batch was the last piece of recipe
-                    set ingredient = iter.data
-                endloop
+                call result.destroy()
+                set result = 0
+                exitwhen true
             endif
+            // Seek node which is not part of this batch
+            loop
+                set iter = iter.next
+                exitwhen iter == 0 or iter.data.index != idx
+            endloop
         endloop
 
         set itm = null
-        return resultIngredients
+        return result
     endmethod
 
     method test takes unit whichUnit, ItemVector items returns RecipeIngredientVector
-        if count <= 0 or count > items.size() then
+        if items == 0 or items.size() < count then
             return 0
         endif
 static if LIBRARY_ItemRestriction then
@@ -698,8 +627,8 @@ endif
             call items.push(UnitItemInSlot(whichUnit, slot))
             set slot = slot + 1
         endloop
-
         set result = test(whichUnit, items)
+
         call items.destroy()
         return result
     endmethod
@@ -707,19 +636,37 @@ endif
     method assemble takes unit whichUnit, ItemVector fromItems returns boolean
         local integer size = fromItems.size()
         local RecipeIngredient ingredient
+        local item rewardItm
         local item itm
         local integer chrgs
-        local RecipeIngredientVector resultIngredients = test(whichUnit, fromItems)
+        local RecipeIngredientVector fromIngredients = test(whichUnit, fromItems)
+        local ItemVector usedItems
         local integer i = 0
 
-        if resultIngredients == 0 then
+        if fromIngredients == 0 then
             return false
         endif
+        set rewardItm = CreateItem(reward, GetUnitX(whichUnit), GetUnitY(whichUnit))
+        if charges > 0 then
+            call SetItemCharges(rewardItm, charges)
+        endif
 
+        set usedItems = ItemVector.create()
         loop
             exitwhen i >= size
-            if resultIngredients[i] != 0 then
-                set ingredient = resultIngredients[i]
+            if fromIngredients[i] != 0 then
+                call usedItems.push(fromItems[i])
+            endif
+            set i = i + 1
+        endloop
+
+        call FireEvent(this, whichUnit, rewardItm, usedItems)
+
+        set i = 0
+        loop
+            exitwhen i >= size
+            set ingredient = fromIngredients[i]
+            if ingredient != 0 then
                 set itm = fromItems[i]
 
                 if ingredient.charges > 0 then
@@ -736,16 +683,11 @@ endif
 
             set i = i + 1
         endloop
+        call UnitAddItem(whichUnit, rewardItm)
 
-        set itm = CreateItem(reward, GetUnitX(whichUnit), GetUnitY(whichUnit))
-        if charges > 0 then
-            call SetItemCharges(itm, charges)
-        endif
-        call UnitAddItem(whichUnit, itm)
-
-        call FireEvent(this, whichUnit, itm, resultIngredients)
-
-        call resultIngredients.destroy()
+        call fromIngredients.destroy()
+        call usedItems.destroy()
+        set rewardItm = null
         set itm = null
         return true
     endmethod
@@ -761,8 +703,8 @@ endif
             call items.push(UnitItemInSlot(whichUnit, slot))
             set slot = slot + 1
         endloop
-
         set result = assemble(whichUnit, items)
+
         call items.destroy()
         return result
     endmethod
@@ -770,7 +712,7 @@ endif
     method disassemble takes unit whichUnit returns boolean
         local integer slot = 0
         local integer size = UnitInventorySize(whichUnit)
-        local boolean found = false
+        local boolean result = false
         local item itm
         local RecipeIngredientListItem iter
         local RecipeIngredient ingredient
@@ -783,38 +725,36 @@ endif
             exitwhen slot >= size
             set itm = UnitItemInSlot(whichUnit, slot)
             if GetItemTypeId(itm) == reward then
-                set found = true
+                call RemoveItem(itm)
+
+                set iter = ingredients.first
+                loop
+                    exitwhen iter == 0
+                    set ingredient = iter.data
+                    if ingredient.perishable then
+                        set itm = CreateItem(ingredient.itemTypeId, GetUnitX(whichUnit), GetUnitY(whichUnit))
+                        if ingredient.charges > 0 then
+                            call SetItemCharges(itm , ingredient.charges)
+                        endif
+                        call UnitAddItem(whichUnit, itm)
+                    endif
+
+                    set iter = iter.next
+                endloop
+
+                set result = true
                 exitwhen true
             endif
             set slot = slot + 1
         endloop
 
-        if not found then
-            set itm = null
-            return false
-        endif
-
-        set iter = ingredients.first
-        loop
-            exitwhen iter == 0
-            set ingredient = iter.data
-            if ingredient.perishable then
-                set itm = CreateItem(ingredient.itemTypeId, GetUnitX(whichUnit), GetUnitY(whichUnit))
-                if ingredient.charges > 0 then
-                    call SetItemCharges(itm , ingredient.charges)
-                endif
-                call UnitAddItem(whichUnit, itm)
-            endif
-            set iter = iter.next
-        endloop
-
         set itm = null
-        return true
+        return result
     endmethod
 endstruct
 
 function UnitAssembleItem takes unit whichUnit, integer itemTypeId returns boolean
-    local ItemRecipeList recipes = ItemRecipe.getRecipes(itemTypeId)
+    local ItemRecipeList recipes = ItemRecipe.getRecipesForReward(itemTypeId)
     local ItemRecipeListItem iter
 
     if recipes != 0 then
@@ -831,29 +771,29 @@ function UnitAssembleItem takes unit whichUnit, integer itemTypeId returns boole
 endfunction
 
 function UnitDisassembleItem takes unit whichUnit, item whichItem returns boolean
-    local integer itemTypeId = GetItemTypeId(whichItem)
-    local ItemRecipeList recipes = ItemRecipe.getRecipes(itemTypeId)
+    local ItemRecipeList recipes
 
-    if not UnitHasItem(whichUnit, whichItem) or recipes == 0 then
-        return false
-    elseif recipes.size() > 1 then
+    if UnitHasItem(whichUnit, whichItem) then
+        set recipes = ItemRecipe.getRecipesForReward(GetItemTypeId(whichItem))
         // Disassembling item with multiple recipe variants is ambiguous
-        return false
+        if recipes != 0 and recipes.size() == 1 then
+            return recipes.front().disassemble(whichUnit)
+        endif
     endif
-    
-    return recipes.front().disassemble(whichUnit)
+    return false
 endfunction
 
 private function OnPickup takes nothing returns nothing
-    local unit u = GetTriggerUnit()
-    local item itm = GetManipulatedItem()
-    local integer itemTypeId = GetItemTypeId(itm)
-    local ItemRecipeList recipes = ItemRecipe.getRecipesForIngredient(itemTypeId)
+    local unit u
+    local integer itemTypeId = GetItemTypeId(GetManipulatedItem())
+    local ItemRecipeList recipes = ItemRecipe.getRecipesWithIngredient(itemTypeId)
     local ItemRecipeListItem iter
     local ItemRecipe recipe
 
     if recipes != 0 then
+        set u = GetTriggerUnit()
         set iter = recipes.first
+
         loop
             exitwhen iter == 0
             set recipe = iter.data
@@ -862,26 +802,26 @@ private function OnPickup takes nothing returns nothing
             endif
             set iter = iter.next
         endloop
+        set u = null
     endif
-
-    set u = null
-    set itm = null
 endfunction
 
 static if LIBRARY_InventoryEvent then
 private function OnMoved takes nothing returns nothing
-    local unit u = GetInventoryManipulatingUnit()
+    local unit u
     local item itm = GetInventoryManipulatedItem()
-    local integer itemTypeId = GetItemTypeId(itm)
-    local ItemRecipeList recipes = ItemRecipe.getRecipesForIngredient(itemTypeId)
+    local ItemRecipeList recipes = ItemRecipe.getRecipesWithIngredient(GetItemTypeId(itm))
     local ItemRecipeListItem iter
     local ItemRecipe recipe
     local integer slot = 0
-    local integer size = UnitInventorySize(u)
+    local integer size
     local ItemVector items
 
     if recipes != 0 then
+        set u = GetInventoryManipulatingUnit()
+        set size = UnitInventorySize(u)
         set items = ItemVector.create()
+
         loop
             exitwhen slot >= size
             call items.push(UnitItemInSlot(u, slot))
@@ -899,22 +839,23 @@ private function OnMoved takes nothing returns nothing
             endif
             set iter = iter.next
         endloop
-        call items.destroy()
-    endif
 
-    set u = null
+        call items.destroy()
+        set u = null
+    endif
     set itm = null
 endfunction
 endif
 
 private function OnCast takes nothing returns nothing
-    local unit u = GetTriggerUnit()
-    local integer abilityId = GetSpellAbilityId()
-    local ItemRecipeList recipes = ItemRecipe.getRecipesForAbility(abilityId)
+    local unit u
+    local ItemRecipeList recipes = ItemRecipe.getRecipesWithAbility(GetSpellAbilityId())
     local ItemRecipeListItem iter
 
     if recipes != 0 then
+        set u = GetTriggerUnit()
         set iter = recipes.first
+
         loop
             exitwhen iter == 0
             if iter.data.assembleEx(u) then
@@ -922,22 +863,21 @@ private function OnCast takes nothing returns nothing
             endif
             set iter = iter.next
         endloop
+        set u = null
     endif
-
-    set u = null
 endfunction
 
 static if LIBRARY_SmoothItemPickup then
 private function GetCheatRecipe takes unit u, item itm returns ItemRecipe
-    local integer itemTypeId = GetItemTypeId(itm)
-    local ItemRecipeList recipes = ItemRecipe.getRecipesForIngredient(itemTypeId)
+    local ItemRecipeList recipes = ItemRecipe.getRecipesWithIngredient(GetItemTypeId(itm))
     local ItemRecipeListItem iter
     local ItemRecipe recipe
+    local ItemRecipe result = 0
     local integer slot = 0
     local integer size
     local ItemVector items
     local RecipeIngredientList ingredients
-    local RecipeIngredientListItem ingredIter
+    local RecipeIngredientListItem ingrIter
 
     if recipes == 0 then
         return 0
@@ -959,20 +899,23 @@ private function GetCheatRecipe takes unit u, item itm returns ItemRecipe
 
         if recipe.pickupable and not recipe.ordered then
             set ingredients = recipe.getIngredients()
-            set ingredIter = ingredients.first
+            set ingrIter = ingredients.first
             loop
-                exitwhen ingredIter == 0
+                exitwhen ingrIter == 0
                 // At least one item has to removed, in order to fit recipe reward in
-                if ingredIter.data.perishable and recipe.test(u, items) != 0 then
-                    return recipe
+                if ingrIter.data.perishable and recipe.test(u, items) != 0 then
+                    set result = recipe
+                    exitwhen true
                 endif
-                set ingredIter = ingredIter.next
+                set ingrIter = ingrIter.next
             endloop
         endif
 
         set iter = iter.next
     endloop
-    return 0
+
+    call items.destroy()
+    return result
 endfunction
 
 private function OnSmoothPickup takes nothing returns nothing
@@ -1000,7 +943,7 @@ private function OnSmoothPickup takes nothing returns nothing
     set itm = null
 endfunction
 
-private struct RecipeSmoothPickupPredicate extends array
+private struct SmoothRecipeAssembly extends array
     static method canPickup takes unit whichUnit, item whichItem returns boolean
         return GetCheatRecipe(whichUnit, whichItem) != 0
     endmethod
@@ -1012,8 +955,7 @@ endif
 private module Init
     private static method onInit takes nothing returns nothing
         set EVENT_ITEM_RECIPE_ASSEMBLE = CreateNativeEvent()
-
-        set recipeMap = Table.create()
+        set instanceTable = Table.create()
 
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function OnPickup)
         call RegisterAnyPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_EFFECT, function OnCast)
@@ -1023,7 +965,7 @@ endif
 static if LIBRARY_SmoothItemPickup then
         // Allow for smooth pickup for pickup-type unordered recipes
         call RegisterNativeEvent(EVENT_ITEM_SMOOTH_PICKUP, function OnSmoothPickup)
-        call AddSmoothItemPickupCondition(RecipeSmoothPickupPredicate.create())
+        call AddSmoothItemPickupCondition(SmoothRecipeAssembly.create())
 endif
     endmethod
 endmodule
