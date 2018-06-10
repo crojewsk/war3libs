@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.3.2
+*  ItemRecipe v1.0.3.4
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -131,6 +131,10 @@ public class ItemRecipe
         flushRecipe(-reward, this)
         destroy ingredients
 
+    /** Returns reward item type. */
+    function getReward() returns int
+        return reward
+
     /** Number of items required for the recipe. */
     function count() returns int
         return count
@@ -138,14 +142,6 @@ public class ItemRecipe
     /** Returns shallow copy of item recipe data. */
     function getIngredients() returns LinkedList<RecipeIngredient>
         return ingredients.copy()
-
-    /** Returns reward item type. */
-    function getReward() returns int
-        return reward
-
-    /** Retrieves id of ability thats triggers assembly of this recipe. */
-    function getAbility() returns int
-        return abilityId
 
     /** Whether specified item type is a part of the recipe. */
     function isIngredient(int itemTypeId) returns boolean
@@ -155,6 +151,19 @@ public class ItemRecipe
                 result = true
                 break
         return result
+
+    /** Retrieves id of ability thats triggers assembly of this recipe. */
+    function getAbility() returns int
+        return abilityId
+
+    /** Sets or removes specified ability from triggering recipe assembly. */
+    function setAbility(int abilityId)
+        if this.abilityId != abilityId
+            if this.abilityId != 0
+                flushRecipe(abilityId, this)
+            if abilityId > 0
+                this.abilityId = abilityId
+                saveRecipe(abilityId, this)
 
     /** Starts single-reference counted batch. Allows to assign multiple items to the same item slot. */
     function startBatch()
@@ -166,15 +175,6 @@ public class ItemRecipe
         if batch
             batch = false
             count++
-
-    /** Sets or removes specified ability from triggering recipe assembly. */
-    function setAbility(int abilityId)
-        if this.abilityId != abilityId
-            if this.abilityId != 0
-                flushRecipe(abilityId, this)
-            if abilityId > 0
-                this.abilityId = abilityId
-                saveRecipe(abilityId, this)
 
     /** Removes all entries that match specified item type from recipe ingredient list. */
     function removeItem(int itemTypeId)
@@ -236,7 +236,7 @@ public class ItemRecipe
             // Seek node which is not part of this batch
             while iter.hasNext()
                 if iter.lookahead().index != idx
-                    break // batch was the last piece of recipe
+                    break
                 iter.next()
             slot++
         iter.close()
@@ -275,7 +275,7 @@ public class ItemRecipe
             // Seek node which is not part of this batch
             while iter.hasNext()
                 if iter.lookahead().index != idx
-                    break // batch was the last piece of recipe
+                    break
                 iter.next()
         iter.close()
         return result
@@ -284,7 +284,7 @@ public class ItemRecipe
     function test(unit whichUnit, LinkedList<item> items) returns HashList<RecipeIngredient>
         HashList<RecipeIngredient> result = null
 
-        if count > 0 and items.size() >= count
+        if items != null and items.size() >= count
             if requirement == null or requirement.filter(whichUnit)
                 if ordered
                     result = orderedSearch(items)
@@ -473,7 +473,7 @@ function onSmoothPickup()
 
 class SmoothRecipeAssembly implements SmoothPickupPredicate
     function canPickup(unit whichUnit, item whichItem) returns boolean
-        return whichUnit.isInventoryFull() and getCheatRecipe(whichUnit, whichItem) != null
+        return getCheatRecipe(whichUnit, whichItem) != null
 
 init
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickup())
