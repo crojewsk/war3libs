@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    SmoothItemPickup v1.0.2.4
+*    SmoothItemPickup v1.0.2.5
 *       by Bannar
 *
 *    Allows for item pickup despite unit inventory being full.
@@ -157,6 +157,44 @@ function RemoveSmoothItemPickupCondition takes SmoothItemPickupPredicate predica
     endif
 endfunction
 
+private struct PeriodicData extends array
+    unit picker
+    item itm
+    real range
+
+    implement Alloc
+
+    static method create takes unit u, real range returns thistype
+        local thistype this = allocate()
+        set this.picker = u
+        set this.range = range
+
+        call ongoing.push(this)
+        set table[GetHandleId(u)] = this
+        return this
+    endmethod
+
+    method destroy takes nothing returns nothing
+        call table.remove(GetHandleId(picker))
+        set picker = null
+        set itm = null
+
+        call ongoing.erase(ongoing.find(this))
+        if ongoing.empty() then
+            call PauseTimer(looper)
+        endif
+
+        call deallocate()
+    endmethod
+
+    static method get takes integer index returns thistype
+        if table.has(index) then
+            return table[index]
+        endif
+        return 0
+    endmethod
+endstruct
+
 private function FireEvent takes unit u, item itm returns nothing
     local unit prevUnit = eventUnit
     local item prevItem = eventItem
@@ -190,38 +228,6 @@ private function Test takes unit u, item itm, real range returns boolean
     return (dx * dx + dy * dy) <= range
 endfunction
 
-private struct PeriodicData extends array
-    unit unit
-    item item
-    real range
-
-    implement Alloc
-
-    method destroy takes nothing returns nothing
-        call table.remove(GetHandleId(unit))
-        set unit = null
-        set item = null
-
-        call ongoing.erase(ongoing.find(this))
-        if ongoing.empty() then
-            call PauseTimer(looper)
-        endif
-
-        call deallocate()
-    endmethod
-
-    static method create takes unit u, real range returns thistype
-        local thistype this = allocate()
-
-        call ongoing.push(this)
-        set this.unit = u
-        set this.range = range
-        set table[GetHandleId(u)] = this
-
-        return this
-    endmethod
-endstruct
-
 private function OnCallback takes nothing returns nothing
     local IntegerListItem iter = ongoing.first
     local PeriodicData data
@@ -229,12 +235,12 @@ private function OnCallback takes nothing returns nothing
     loop
         exitwhen iter == 0
         set data = iter.data
-        if not UnitAlive(data.unit) or GetUnitCurrentOrder(data.unit) != 851986 /*
-        */ or not IsItemPickupable(data.item) then // order move
+        if not UnitAlive(data.picker) or GetUnitCurrentOrder(data.picker) != 851986 /*
+        */ or not IsItemPickupable(data.itm) then // order move
             call data.destroy()
         else
-            if Test(data.unit, data.item, data.range) then
-                call FireEvent(data.unit, data.item)
+            if Test(data.picker, data.itm, data.range) then
+                call FireEvent(data.picker, data.itm)
                 call data.destroy()
             endif
         endif
@@ -291,7 +297,6 @@ private function OnTargetOrder takes nothing returns nothing
         endif
         set iter = iter.next
     endloop
-
     if not proceed then
         return
     endif
@@ -308,15 +313,14 @@ private function OnTargetOrder takes nothing returns nothing
         call TimerStart(tmr, 0.0, false, function OnNullTimer)
         set tmr = null
     else // if unit is not nearby target item, issue artificial move order
-        if not table.has(GetHandleId(argUnit)) then
+        set data = PeriodicData.get(GetHandleId(argUnit))
+        if data == 0 then
             if ongoing.empty() then
                 call TimerStart(looper, 0.031250000, true, function OnCallback)
             endif
             set data = PeriodicData.create(argUnit, range)
-        else
-            set data = table[GetHandleId(argUnit)]
         endif
-        set data.item = argItem
+        set data.itm = argItem
 
         set angle = bj_RADTODEG * Atan2(GetUnitY(argUnit) - GetItemY(argItem), GetUnitX(argUnit) - GetItemX(argItem))
         set x = GetItemX(argItem) + PICK_UP_RANGE * Cos(angle * bj_DEGTORAD)
