@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.2.0
+*    ItemRecipe v1.1.2.1
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -894,7 +894,7 @@ private function GetCheatRecipe takes unit u, item itm returns ItemRecipe
 
     set iter = recipes.first
     loop
-        exitwhen iter == 0
+        exitwhen iter == 0 or result != 0
         set recipe = iter.data
 
         if recipe.pickupable and not recipe.ordered then
@@ -937,6 +937,7 @@ private function OnSmoothPickup takes nothing returns nothing
         endloop
         call items.push(itm)
         call recipe.assemble(u, items)
+        call items.destroy()
     endif
 
     set u = null
