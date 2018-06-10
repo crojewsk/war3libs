@@ -443,13 +443,16 @@ function getCheatRecipe(unit u, item itm) returns ItemRecipe
     items.push(itm)
 
     ItemRecipe result = null
-    for recipe in recipes
+    var iter = recipes.iterator()
+    while iter.hasNext() and result == null
+        var recipe = iter.next()
         if recipe.pickupable and not recipe.ordered
             for ingredient in recipe.getIngredients()
                 // At least one item has to removed, in order to fit recipe reward in
                 if ingredient.perishable and recipe.test(u, items) != null
                     result = recipe
                     break
+    iter.close()
     destroy items
     return result
 
@@ -466,8 +469,9 @@ function onSmoothPickup()
             items.push(u.itemInSlot(slot))
         items.push(itm)
         recipe.assemble(u, items)
+        destroy items
 
-class SmoothRecipeAssemly implements SmoothPickupPredicate
+class SmoothRecipeAssembly implements SmoothPickupPredicate
     function canPickup(unit whichUnit, item whichItem) returns boolean
         return whichUnit.isInventoryFull() and getCheatRecipe(whichUnit, whichItem) != null
 
@@ -478,4 +482,4 @@ init
 
     // Allow for smooth pickup for pickup-type unordered recipes
     registerSmoothItemPickupEvent(() -> onSmoothPickup())
-    addSmoothItemPickupCondition(new SmoothRecipeAssemly())
+    addSmoothItemPickupCondition(new SmoothRecipeAssembly())
