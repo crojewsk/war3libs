@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    StackNSplit v1.1.2.1
+*    StackNSplit v1.1.2.2
 *       by Bannar
 *
 *    Easy item charges stacking and splitting.
@@ -228,14 +228,9 @@ function MakeItemUnstackable takes integer elementType returns nothing
 endfunction
 
 function MakeItemStackable takes integer elementType, integer stacks, integer splits returns boolean
-    local integer value = splits
-
     if not IsItemContainer(elementType) and stacks > 0 then
-        if value < 1 then
-            set value = 1
-        endif
         set table[0][elementType] = stacks
-        set table[1][elementType] = value
+        set table[1][elementType] = IMaxBJ(splits, 1)
         return true
     endif
     return false
@@ -274,13 +269,6 @@ function SetItemContainer takes integer elementType, integer containerType, inte
         return false
     endif
 
-    if splits < 1 then
-        set splits = 1
-    endif
-    if minCharges < 0 then
-        set minCharges = 0
-    endif
-
     set containers = GetItemContainers(elementType)
     if containers == 0 then
         set containers = IntegerList.create()
@@ -289,9 +277,9 @@ function SetItemContainer takes integer elementType, integer containerType, inte
     call containers.push(containerType)
 
     set table[0][containerType] = stacks
-    set table[1][containerType] = splits
+    set table[1][containerType] = IMaxBJ(splits, 1)
     set table[3][containerType] = elementType
-    set table[4][containerType] = minCharges
+    set table[4][containerType] = IMaxBJ(minCharges, 0)
     return true
 endfunction
 
@@ -426,27 +414,29 @@ function UnitStackItem takes unit whichUnit, item whichItem returns boolean
         return result
     endif
 
-    if IsItemContainer(itemTypeId) then
+    if not IsItemContainer(itemTypeId) then
+        if ItemHasContainer(itemTypeId) then
+            set iter = GetItemContainers(itemTypeId).first
+            loop
+                exitwhen iter == 0
+                set containerType = iter.data
+
+                set max = GetItemContainerMaxStacks(containerType)
+                set charges = StackItem(whichUnit, whichItem, whichItem, containerType, max)
+                exitwhen charges == 0
+                set iter = iter.next
+            endloop
+            set result = true
+        endif
+
+        if IsItemStackable(itemTypeId) and charges > 0 then
+            set max = GetItemMaxStacks(itemTypeId)
+            call StackItem(whichUnit, whichItem, whichItem, itemTypeId, max)
+            set result = true
+        endif
+    else
         set max = GetItemContainerMaxStacks(itemTypeId)
         call StackItem(whichUnit, whichItem, whichItem, GetItemContainerItem(itemTypeId), max)
-        return true
-    elseif ItemHasContainer(itemTypeId) then
-        set iter = GetItemContainers(itemTypeId).first
-        loop
-            exitwhen iter == 0
-            set containerType = iter.data
-
-            set max = GetItemContainerMaxStacks(containerType)
-            set charges = StackItem(whichUnit, whichItem, whichItem, containerType, max)
-            exitwhen charges == 0
-            set iter = iter.next
-        endloop
-        set result = true
-    endif
-
-    if IsItemStackable(itemTypeId) and charges > 0 then
-        set max = GetItemMaxStacks(itemTypeId)
-        call StackItem(whichUnit, whichItem, whichItem, itemTypeId, max)
         set result = true
     endif
     return result
@@ -455,7 +445,6 @@ endfunction
 function UnitSplitItem takes unit whichUnit, item whichItem returns boolean
     local integer charges = GetItemCharges(whichItem)
     local integer itemTypeId = GetItemTypeId(whichItem)
-    local integer max
     local integer toSplit
     local integer elementType
     local IntegerListItem iter
@@ -484,9 +473,9 @@ function UnitSplitItem takes unit whichUnit, item whichItem returns boolean
     endif
     call SetItemCharges(whichItem, charges - toSplit)
     call FireEvent(EVENT_ITEM_CHARGES_REMOVED, whichUnit, whichItem, toSplit)
+
     set with = CreateItem(elementType, GetUnitX(whichUnit), GetUnitY(whichUnit))
     call SetItemCharges(with, toSplit)    
-
     // Redistribute splitted stacks if possible
     if ItemHasContainer(elementType) then
         set iter = GetItemContainers(elementType).first
@@ -494,15 +483,13 @@ function UnitSplitItem takes unit whichUnit, item whichItem returns boolean
             exitwhen iter == 0
             set containerType = iter.data
 
-            set max = GetItemContainerMaxStacks(containerType)
-            set toSplit = StackItem(whichUnit, with, whichItem, containerType, max)
+            set toSplit = StackItem(whichUnit, with, whichItem, containerType, GetItemContainerMaxStacks(containerType))
             exitwhen toSplit == 0
             set iter = iter.next
         endloop
     endif
     if IsItemStackable(elementType) and toSplit > 0 then
-        set max = GetItemMaxStacks(elementType)
-        set toSplit = StackItem(whichUnit, with, whichItem, elementType, max)
+        set toSplit = StackItem(whichUnit, with, whichItem, elementType, GetItemMaxStacks(elementType))
     endif
 
     if toSplit > 0 then // something is left
@@ -635,7 +622,7 @@ private function OnSmoothPickup takes nothing returns nothing
     call PickupItem(GetSmoothItemPickupUnit(), GetSmoothItemPickupItem())
 endfunction
 
-private struct StackSmoothPickupPredicate extends array
+private struct SmoothChargesStack extends array
     static method canPickup takes unit whichUnit, item whichItem returns boolean
         local integer itemTypeId = GetItemTypeId(whichItem)
 
@@ -663,7 +650,7 @@ private module StackNSplitInit
         call RegisterNativeEvent(EVENT_ITEM_INVENTORY_MOVE, function OnMoved)
 static if LIBRARY_SmoothItemPickup then
         call RegisterNativeEvent(EVENT_ITEM_SMOOTH_PICKUP, function OnSmoothPickup)
-        call AddSmoothItemPickupCondition(StackSmoothPickupPredicate.create())
+        call AddSmoothItemPickupCondition(SmoothChargesStack.create())
 endif
     endmethod
 endmodule
