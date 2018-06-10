@@ -1,5 +1,5 @@
 /*
-*  ItemRestriction v1.1.2.0
+*  ItemRestriction v1.1.2.1
 *     by Bannar
 *
 *  For restricting or limiting items from being equipped.
@@ -38,6 +38,8 @@ public interface UnitRequirementPredicate
 
 /** Set of unit-specific requirements. */ 
 public class UnitRequirement
+    /** Name associated with requirement. */
+    string name
     /** Unit level requirement. */
     var level = 0
     /** Hero strength requirement. */
@@ -48,8 +50,6 @@ public class UnitRequirement
     var intelligence = 0
     /** Whether to include bonuses when checking unit statistics. */
     var includeBonuses = false
-    /** Name associated with requirement. */
-    string name
 
     /** Unit type requirement. Omitted if empty. */
     private constant units = new LinkedList<int>()
@@ -83,12 +83,12 @@ public class UnitRequirement
 
     /** Removes specified unit type from requirement criterias. */
     function removeUnit(int unitTypeId)
-        if unitTypeId > 0 and units.contains(unitTypeId)
+        if unitTypeId > 0
             units.remove(unitTypeId)
 
     /** Adds new criteria to requirement criterias. */
     function addCondition(UnitRequirementPredicate predicate)
-        if predicate != null
+        if predicate != null and not conditions.contains(predicate)
             conditions.add(predicate)
 
     /** Removes specified condition from requirement criterias. */
@@ -146,16 +146,16 @@ public class ItemRestriction
     // For extra speed, each item type involved will have separate list assigned
     private static constant instanceMap = new HashMap<int, LinkedList<ItemRestriction>>()
 
-    private static function saveRestriction(int index, ItemRestriction recipe)
+    private static function saveRestriction(int index, ItemRestriction restriction)
         if not instanceMap.has(index)
             instanceMap.put(index, new LinkedList<ItemRestriction>())
         var restrictions = instanceMap.get(index)
-        if not restrictions.contains(recipe)
-            restrictions.push(recipe)
+        if not restrictions.contains(restriction)
+            restrictions.push(restriction)
 
-    private static function flushRestriction(int index, ItemRestriction recipe)
+    private static function flushRestriction(int index, ItemRestriction restriction)
         var restrictions = instanceMap.get(index)
-        restrictions.remove(recipe)
+        restrictions.remove(restriction)
         if restrictions.isEmpty()
             destroy restrictions
             instanceMap.remove(index)
@@ -183,6 +183,10 @@ public class ItemRestriction
         destroy exceptions
         destroy exclusives
 
+    /** Item types that enforce this restriction. */
+    function getItems() returns LinkedList<int>
+        return items.copy()
+
     /** Whether specified item type is a part of restriction. */
     function has(int itemTypeId) returns boolean
         return items.contains(itemTypeId)
@@ -198,6 +202,11 @@ public class ItemRestriction
         if itemTypeId > 0 and not has(itemTypeId)
             items.push(itemTypeId)
             saveRestriction(itemTypeId, this)
+
+    /** Returns collection of UnitRequirement instances that may define different limits.
+        Example: berserker may carry two 2H-weapons, rather than one. */
+    function getExceptions() returns LinkedList<LimitException>
+        return exceptions.copy()
 
     /** Removes item limit exception for specified requirement. */
     function removeException(UnitRequirement requirement)
@@ -216,32 +225,23 @@ public class ItemRestriction
                 if exception.requirement == requirement
                     return
             exceptions.push(new LimitException(requirement, newLimit))
-    
+
+    /** Returns collection of ItemRestriction instances that exclude each other from being picked.
+        Example: a unit cannot carry both 1H-weapons and 2H-weapons at the same time. */
+    function getExclusives() returns LinkedList<ItemRestriction>
+        return exclusives.copy()
+
     /** Makes specified restriction non-exclusive with this restriction. */
     function removeExclusive(ItemRestriction restriction)
         if exclusives.contains(restriction)
             exclusives.remove(restriction)
             restriction.exclusives.remove(this)
-    
+
     /** Makes specified restriction exclusive with this restriction. */
     function addExclusive(ItemRestriction restriction)
         if restriction != null and not exclusives.contains(restriction)
             exclusives.push(restriction)
             restriction.exclusives.push(this)
-
-    /** Item types that enforce this restriction. */
-    function getItems() returns LinkedList<int>
-        return items.copy()
-
-    /** Collection of UnitRequirement instances that may define different limits.
-        Example: berserker may carry two 2H-weapons, rather than one. */
-    function getExceptions() returns LinkedList<LimitException>
-        return exceptions.copy()
-
-    /** Collection of ItemRestriction instances that exclude each other from being picked.
-        Example: a unit cannot carry both 1H-weapons and 2H-weapons at the same time. */
-    function getExclusives() returns LinkedList<ItemRestriction>
-        return exclusives.copy()
 
     protected function getCount(int index) returns int
         return table.loadInt(index)
