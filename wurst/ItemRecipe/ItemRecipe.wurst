@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.3.4
+*  ItemRecipe v1.0.3.5
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -42,6 +42,14 @@ public function registerItemRecipeEvent(code func)
 /** Returns trigger handle associated with recipe event. */
 public function getItemRecipeEventTrigger() returns trigger
     return eventTrigger
+
+function unit.getItemList() returns LinkedList<item>
+    var last = this.inventorySize() - 1
+    var items = new LinkedList<item>()
+
+    for slot = 0 to last
+        items.push(this.itemInSlot(slot))
+    return items
 
 function fireEvent(eventInfo currState)
     var prevState = eventState
@@ -294,13 +302,8 @@ public class ItemRecipe
 
     /** Checks if recipe can be assembled for specified unit. */
     function test(unit whichUnit) returns HashList<RecipeIngredient>
-        var last = whichUnit.inventorySize() - 1
-        var items = new LinkedList<item>()
-
-        for slot = 0 to last
-            items.push(whichUnit.itemInSlot(slot))
+        var items = whichUnit.getItemList()
         var result = test(whichUnit, items)
-
         destroy items
         return result
 
@@ -341,13 +344,8 @@ public class ItemRecipe
 
     /** Attempts to assemble recipe for specified unit. */
     function assemble(unit whichUnit) returns boolean
-        var last = whichUnit.inventorySize() - 1
-        var items = new LinkedList<item>()
-
-        for slot = 0 to last
-            items.push(whichUnit.itemInSlot(slot))
+        var items = whichUnit.getItemList()
         var result = assemble(whichUnit, items)
-
         destroy items
         return result
 
@@ -410,11 +408,7 @@ function onMoved()
 
     if recipes != null
         var u = getInventoryManipulatingUnit()
-        var last = u.inventorySize() - 1
-        var items = new LinkedList<item>()
-
-        for slot = 0 to last
-            items.push(u.itemInSlot(slot))
+        var items = u.getItemList()
         items.set(getInventorySlotFrom(), getInventorySwappedItem())
         items.set(getInventorySlotTo(), itm)
 
@@ -436,14 +430,11 @@ function getCheatRecipe(unit u, item itm) returns ItemRecipe
     if recipes == null
         return null
 
-    var last = u.inventorySize() - 1
-    var items = new LinkedList<item>()
-    for slot = 0 to last
-        items.push(u.itemInSlot(slot))
-    items.push(itm)
-
     ItemRecipe result = null
+    var items = u.getItemList()
+    items.push(itm)
     var iter = recipes.iterator()
+
     while iter.hasNext() and result == null
         var recipe = iter.next()
         if recipe.pickupable and not recipe.ordered
@@ -462,11 +453,7 @@ function onSmoothPickup()
     var recipe = getCheatRecipe(u, itm)
 
     if recipe != null
-        var last = u.inventorySize() - 1
-        var items = new LinkedList<item>()
-
-        for slot = 0 to last
-            items.push(u.itemInSlot(slot))
+        var items = u.getItemList()
         items.push(itm)
         recipe.assemble(u, items)
         destroy items
