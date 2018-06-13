@@ -1,5 +1,5 @@
 /*
-*  ItemRecipe v1.0.3.5
+*  ItemRecipe v1.0.3.6
 *     by Bannar
 *
 *  Powerful item recipe creator.
@@ -257,24 +257,28 @@ public class ItemRecipe
 
         while iter.hasNext()
             var found = false
-            var ingredient = iter.next()
-            var idx = ingredient.index
+            var idx = iter.next().index
+            var head = iter.current // save head of current batch
 
-            // Attempt to find any matching items from given batch within items collection
-            while ingredient.index == idx
-                for slot = 0 to last
-                    if result.get(slot) == null
-                        var itm = items.get(slot)
-                        var itemTypeId = itm.getTypeId()
-                        var charges = itm.getCharges()
+            for slot = 0 to last
+                // Attempt to find any matching item from given batch within items collection
+                if result.get(slot) == null
+                    var itm = items.get(slot)
+                    var itemTypeId = itm.getTypeId()
+                    var charges = itm.getCharges()
+                    var ingredient = head.elem
 
+                    while ingredient.index == idx
                         if itemTypeId == ingredient.itemTypeId and charges >= ingredient.charges
                             result.set(slot, new RecipeIngredient(ingredient))
                             found = true
                             break
-                if found or not iter.hasNext()
-                    break
-                ingredient = iter.next()
+                        if not iter.hasNext()
+                            break
+                        ingredient = iter.next()
+                    if found
+                        break
+                    iter.current = head
 
             if not found
                 destroy result
