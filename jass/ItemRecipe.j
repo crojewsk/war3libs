@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.2.1
+*    ItemRecipe v1.1.2.2
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -215,6 +215,25 @@ function GetEventItemRecipeIngredients takes nothing returns ItemVector
     return eventIngredients
 endfunction
 
+// ItemVector definition can be moved directly to the VectorT library file
+//! runtextmacro DEFINE_VECTOR("", "ItemVector", "item")
+//! runtextmacro DEFINE_STRUCT_VECTOR("", "RecipeIngredientVector", "RecipeIngredient")
+//! runtextmacro DEFINE_STRUCT_LIST("", "RecipeIngredientList", "RecipeIngredient")
+//! runtextmacro DEFINE_STRUCT_LIST("", "ItemRecipeList", "ItemRecipe")
+
+private function GetUnitItemVector takes unit whichUnit returns ItemVector
+    local integer slot = 0
+    local integer size = UnitInventorySize(whichUnit)
+    local ItemVector result = ItemVector.create()
+
+    loop
+        exitwhen slot >= size
+        call result.push(UnitItemInSlot(whichUnit, slot))
+        set slot = slot + 1
+    endloop
+    return result
+endfunction
+
 private function FireEvent takes ItemRecipe recipe, unit u, item it, ItemVector ingredients returns nothing
     local ItemRecipe prevRecipe = eventRecipe
     local unit prevUnit = eventUnit
@@ -271,11 +290,6 @@ struct RecipeIngredient extends array
         return create(other.itemTypeId, other.perishable, other.charges, other.index)
     endmethod
 endstruct
-
-//! runtextmacro DEFINE_VECTOR("", "ItemVector", "item")
-//! runtextmacro DEFINE_STRUCT_VECTOR("", "RecipeIngredientVector", "RecipeIngredient")
-//! runtextmacro DEFINE_STRUCT_LIST("", "RecipeIngredientList", "RecipeIngredient")
-//! runtextmacro DEFINE_STRUCT_LIST("", "ItemRecipeList", "ItemRecipe")
 
 struct ItemRecipe extends array
     integer charges
@@ -617,31 +631,21 @@ endif
     endmethod
 
     method testEx takes unit whichUnit returns RecipeIngredientVector
-        local integer slot = 0
-        local integer size = UnitInventorySize(whichUnit)
-        local ItemVector items = ItemVector.create()
-        local RecipeIngredientVector result
-
-        loop
-            exitwhen slot >= size
-            call items.push(UnitItemInSlot(whichUnit, slot))
-            set slot = slot + 1
-        endloop
-        set result = test(whichUnit, items)
-
+        local ItemVector items = GetUnitItemVector(whichUnit)
+        local RecipeIngredientVector result = test(whichUnit, items)
         call items.destroy()
         return result
     endmethod
 
     method assemble takes unit whichUnit, ItemVector fromItems returns boolean
+        local integer i = 0
         local integer size = fromItems.size()
-        local RecipeIngredient ingredient
         local item rewardItm
         local item itm
         local integer chrgs
+        local RecipeIngredient ingredient
         local RecipeIngredientVector fromIngredients = test(whichUnit, fromItems)
         local ItemVector usedItems
-        local integer i = 0
 
         if fromIngredients == 0 then
             return false
@@ -693,18 +697,8 @@ endif
     endmethod
 
     method assembleEx takes unit whichUnit returns boolean
-        local integer slot = 0
-        local integer size = UnitInventorySize(whichUnit)
-        local ItemVector items = ItemVector.create()
-        local boolean result
-
-        loop
-            exitwhen slot >= size
-            call items.push(UnitItemInSlot(whichUnit, slot))
-            set slot = slot + 1
-        endloop
-        set result = assemble(whichUnit, items)
-
+        local ItemVector items = GetUnitItemVector(whichUnit)
+        local boolean result = assemble(whichUnit, items)
         call items.destroy()
         return result
     endmethod
@@ -813,20 +807,11 @@ private function OnMoved takes nothing returns nothing
     local ItemRecipeList recipes = ItemRecipe.getRecipesWithIngredient(GetItemTypeId(itm))
     local ItemRecipeListItem iter
     local ItemRecipe recipe
-    local integer slot = 0
-    local integer size
     local ItemVector items
 
     if recipes != 0 then
         set u = GetInventoryManipulatingUnit()
-        set size = UnitInventorySize(u)
-        set items = ItemVector.create()
-
-        loop
-            exitwhen slot >= size
-            call items.push(UnitItemInSlot(u, slot))
-            set slot = slot + 1
-        endloop
+        set items = GetUnitItemVector(u)
         set items[GetInventorySlotFrom()] = GetInventorySwappedItem()
         set items[GetInventorySlotTo()] = itm
 
@@ -873,8 +858,6 @@ private function GetCheatRecipe takes unit u, item itm returns ItemRecipe
     local ItemRecipeListItem iter
     local ItemRecipe recipe
     local ItemRecipe result = 0
-    local integer slot = 0
-    local integer size
     local ItemVector items
     local RecipeIngredientList ingredients
     local RecipeIngredientListItem ingrIter
@@ -883,15 +866,7 @@ private function GetCheatRecipe takes unit u, item itm returns ItemRecipe
         return 0
     endif
 
-    set size = UnitInventorySize(u)
-    set items = ItemVector.create()
-    loop
-        exitwhen slot >= size
-        call items.push(UnitItemInSlot(u, slot))
-        set slot = slot + 1
-    endloop
-    call items.push(itm)
-
+    set items = GetUnitItemVector(u).push(itm)
     set iter = recipes.first
     loop
         exitwhen iter == 0 or result != 0
@@ -923,19 +898,9 @@ private function OnSmoothPickup takes nothing returns nothing
     local item itm = GetSmoothItemPickupItem()
     local ItemRecipe recipe = GetCheatRecipe(u, itm)
     local ItemVector items
-    local integer slot = 0
-    local integer size
 
     if recipe != 0 then
-        set size = UnitInventorySize(u)
-        set items = ItemVector.create()
-
-        loop
-            exitwhen slot >= size
-            call items.push(UnitItemInSlot(u, slot))
-            set slot = slot + 1
-        endloop
-        call items.push(itm)
+        set items = GetUnitItemVector(u).push(itm)
         call recipe.assemble(u, items)
         call items.destroy()
     endif
