@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    ItemRecipe v1.1.2.2
+*    ItemRecipe v1.1.2.3
 *       by Bannar
 *
 *    Powerful item recipe creator.
@@ -555,47 +555,51 @@ endif
 
     private method unorderedSearch takes ItemVector items returns RecipeIngredientVector
         local boolean found
-        local RecipeIngredient ingredient
         local integer idx
         local integer slot = 0
         local integer size = items.size()
         local item itm
         local integer itemTypeId
         local integer charges
+        local RecipeIngredient ingredient
         local RecipeIngredientVector result = RecipeIngredientVector.create()
         local RecipeIngredientListItem iter = ingredients.first
+        local RecipeIngredientListItem head
         call result.assign(size, 0)
 
         loop
             exitwhen iter == 0
             set found = false
-            set ingredient = iter.data
-            set idx = ingredient.index
+            set idx = iter.data.index
+            set head = iter // save head of current batch
+            set slot = 0
 
-            // Attempt to find any matching items from given batch within items collection
             loop
-                exitwhen ingredient.index != idx
-                set slot = 0
-                loop
-                    exitwhen slot >= size
-                    if result[slot] == 0 then
-                        set itm = items[slot]
-                        set itemTypeId = GetItemTypeId(itm)
-                        set charges = GetItemCharges(itm)
+                exitwhen slot >= size
+                // Attempt to find any matching items from given batch within items collection
+                if result[slot] == 0 then
+                    set itm = items[slot]
+                    set itemTypeId = GetItemTypeId(itm)
+                    set charges = GetItemCharges(itm)
+                    set ingredient = iter.data
 
+                    loop
+                        exitwhen ingredient.index != idx
                         if GetItemTypeId(itm) == ingredient.itemTypeId and charges >= ingredient.charges then
                             set result[slot] = RecipeIngredient[ingredient]
                             set found = true
                             exitwhen true
                         endif
-                    endif
-                    set slot = slot + 1
-                endloop
 
-                exitwhen found
-                set iter = iter.next
-                exitwhen iter == 0
-                set ingredient = iter.data
+                        set iter = iter.next
+                        exitwhen iter == 0
+                        set ingredient = iter.data
+                    endloop
+
+                    exitwhen found
+                    set iter = head
+                endif
+                set slot = slot + 1
             endloop
 
             if not found then
