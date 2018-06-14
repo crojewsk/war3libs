@@ -1,5 +1,5 @@
 /*
-*  SmoothItemPickup v1.0.1.2
+*  SmoothItemPickup v1.0.1.3
 *     by Bannar
 *
 *  Allows for item pickup despite unit inventory being full.
@@ -49,11 +49,12 @@ public function registerSmoothItemPickupEvent(code func)
     eventTrigger.addCondition(Condition(func))
 
 class PeriodicData
-    static constant instances = new HashMap<int, PeriodicData>()
     use LinkedListModule
     unit picker
     item itm
     real range
+
+    static constant instances = new HashMap<int, PeriodicData>()
 
     construct(unit u, real range)
         this.picker = u
