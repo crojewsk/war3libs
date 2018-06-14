@@ -1,5 +1,5 @@
 /*
-*  ItemRestriction v1.1.2.1
+*  ItemRestriction v1.1.2.2
 *     by Bannar
 *
 *  For restricting or limiting items from being equipped.
@@ -144,27 +144,27 @@ public class ItemRestriction
     private constant exceptions = new LinkedList<LimitException>()
     private constant exclusives = new LinkedList<ItemRestriction>()
     // For extra speed, each item type involved will have separate list assigned
-    private static constant instanceMap = new HashMap<int, LinkedList<ItemRestriction>>()
+    private static constant instances = new HashMap<int, LinkedList<ItemRestriction>>()
 
     private static function saveRestriction(int index, ItemRestriction restriction)
-        if not instanceMap.has(index)
-            instanceMap.put(index, new LinkedList<ItemRestriction>())
-        var restrictions = instanceMap.get(index)
+        if not instances.has(index)
+            instances.put(index, new LinkedList<ItemRestriction>())
+        var restrictions = instances.get(index)
         if not restrictions.contains(restriction)
             restrictions.push(restriction)
 
     private static function flushRestriction(int index, ItemRestriction restriction)
-        var restrictions = instanceMap.get(index)
+        var restrictions = instances.get(index)
         restrictions.remove(restriction)
         if restrictions.isEmpty()
             destroy restrictions
-            instanceMap.remove(index)
+            instances.remove(index)
 
     /** Returns restrictions associated with specified item type. */
     static function getRestrictions(int index) returns LinkedList<ItemRestriction>
         LinkedList<ItemRestriction> result = null
-        if instanceMap.has(index)
-            result = instanceMap.get(index)
+        if instances.has(index)
+            result = instances.get(index)
         return result
 
     construct(string name, int limit)
