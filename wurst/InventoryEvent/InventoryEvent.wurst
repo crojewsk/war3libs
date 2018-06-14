@@ -1,5 +1,5 @@
 /*
-*  InventoryEvent v1.0.1.4
+*  InventoryEvent v1.0.1.5
 *     by Bannar
 *
 *  For intuitive inventory event handling.
@@ -8,9 +8,9 @@ package InventoryEvent
 import RegisterEvents
 import Orders
 
-tuple eventState(unit u, item itm, int slotFrom, int slotTo)
+tuple eventInfo(unit u, item itm, int slotFrom, int slotTo)
 
-var eventData = eventState(null, null, -1, -1)
+var eventState = eventInfo(null, null, -1, -1)
 constant eventMovedTrigger = CreateTrigger()
 constant eventUsedTrigger = CreateTrigger()
 
@@ -20,23 +20,23 @@ public enum EVENT_ITEM_INVENTORY
 
 /** Returns unit which manipulated event item. */
 public function getInventoryManipulatingUnit() returns unit
-    return eventData.u
+    return eventState.u
 
 /** Returns manupilated event item. */
 public function getInventoryManipulatedItem() returns item
-    return eventData.itm
+    return eventState.itm
 
 /** Returns slot index of manipulated item from which it was moved or used. */
 public function getInventorySlotFrom() returns int
-    return eventData.slotFrom
+    return eventState.slotFrom
 
 /** Returns slot index of manipulated item to which it was moved. */
 public function getInventorySlotTo() returns int
-    return eventData.slotTo
+    return eventState.slotTo
 
 /** Returns item which manipulated item switched position with if any. */
 public function getInventorySwappedItem() returns item
-    return eventData.u.itemInSlot(eventData.slotTo)
+    return eventState.u.itemInSlot(eventState.slotTo)
 
 public function getInventoryEventTrigger(EVENT_ITEM_INVENTORY whichEvent) returns trigger
     trigger result = null
@@ -55,11 +55,11 @@ public function registerInventoryEvent(EVENT_ITEM_INVENTORY whichEvent, code fun
         case EVENT_ITEM_INVENTORY.USE
             eventUsedTrigger.addCondition(Condition(func))
 
-function fireEvent(trigger evt, eventState currState)
-    var prevState = eventData
-    eventData = currState
+function fireEvent(trigger evt, eventInfo currState)
+    var prevState = eventState
+    eventState = currState
     evt.evaluate()
-    eventData = prevState
+    eventState = prevState
 
 function onItemOrder()
     var order = GetIssuedOrderId()
@@ -69,11 +69,11 @@ function onItemOrder()
         var itm = GetOrderTargetItem()
         var slotFrom = u.getItemSlot(itm)
         var slotTo = order - SpecialOrders.itemdrag00
-        fireEvent(eventMovedTrigger, eventState(u, itm, slotFrom, slotTo))
+        fireEvent(eventMovedTrigger, eventInfo(u, itm, slotFrom, slotTo))
     else
         var slotFrom = order - SpecialOrders.itemuse00
         var itm = u.itemInSlot(slotFrom)
-        fireEvent(eventUsedTrigger, eventState(u, itm, slotFrom, -1))
+        fireEvent(eventUsedTrigger, eventInfo(u, itm, slotFrom, -1))
 
 function onAnyOrder()
     var order = GetIssuedOrderId()
