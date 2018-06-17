@@ -82,7 +82,7 @@
 *
 *       function RegisterDestructableRevival takes destructable whichDest returns nothing
 *          Registers specified destructable to the system.
-*          Can be used to register revival for destructables that were created after game initialization.
+*          Can be used to register revival for destructables that were created after map initialization.
 *
 *****************************************************************************/
 library DestructableRevival requires Alloc, ListT
