@@ -64,7 +64,7 @@ public class UnitRequirement
 
     /** Whether specified unit type is a part of requirement. */
     function has(int unitTypeId) returns boolean
-        return units.contains(unitTypeId)
+        return units.has(unitTypeId)
 
     /** Sets hero statistic requirements to specified values. */
     function requireStat(int str, int agi, int intel)
@@ -78,7 +78,7 @@ public class UnitRequirement
 
     /** Adds specified unit type to requirement criterias. */
     function addUnit(int unitTypeId)
-        if unitTypeId > 0 and not units.contains(unitTypeId)
+        if unitTypeId > 0 and not units.has(unitTypeId)
             units.push(unitTypeId)
 
     /** Removes specified unit type from requirement criterias. */
@@ -88,7 +88,7 @@ public class UnitRequirement
 
     /** Adds new criteria to requirement criterias. */
     function addCondition(UnitRequirementPredicate predicate)
-        if predicate != null and not conditions.contains(predicate)
+        if predicate != null and not conditions.has(predicate)
             conditions.add(predicate)
 
     /** Removes specified condition from requirement criterias. */
@@ -150,7 +150,7 @@ public class ItemRestriction
         if not instances.has(index)
             instances.put(index, new LinkedList<ItemRestriction>())
         var restrictions = instances.get(index)
-        if not restrictions.contains(restriction)
+        if not restrictions.has(restriction)
             restrictions.push(restriction)
 
     private static function flushRestriction(int index, ItemRestriction restriction)
@@ -189,7 +189,7 @@ public class ItemRestriction
 
     /** Whether specified item type is a part of restriction. */
     function has(int itemTypeId) returns boolean
-        return items.contains(itemTypeId)
+        return items.has(itemTypeId)
 
     /** Remove specified item type from this restriction. */
     function removeItem(int itemTypeId)
@@ -233,13 +233,13 @@ public class ItemRestriction
 
     /** Makes specified restriction non-exclusive with this restriction. */
     function removeExclusive(ItemRestriction restriction)
-        if exclusives.contains(restriction)
+        if exclusives.has(restriction)
             exclusives.remove(restriction)
             restriction.exclusives.remove(this)
 
     /** Makes specified restriction exclusive with this restriction. */
     function addExclusive(ItemRestriction restriction)
-        if restriction != null and not exclusives.contains(restriction)
+        if restriction != null and not exclusives.has(restriction)
             exclusives.push(restriction)
             restriction.exclusives.push(this)
 
@@ -283,7 +283,7 @@ public class ItemRestriction
         var threshold = limit
         if not exceptions.isEmpty()
             var exception = getException(index)
-            if exception == null or not exceptions.contains(exception)
+            if exception == null or not exceptions.has(exception)
                 table.removeInt(-index) // clear assigned exception if any
 
                 var iter = exceptions.iterator()

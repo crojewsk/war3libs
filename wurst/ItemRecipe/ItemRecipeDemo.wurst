@@ -6,7 +6,7 @@ class NoTrollsAlive implements UnitRequirementPredicate
     static function filter() returns boolean
         return GetFilterUnit().getTypeId() == 'ndtb' and GetFilterUnit().isAlive() // Spitting Spider
 
-    function isMet(unit _whichUnit) returns string
+    override function isMet(unit _whichUnit) returns string
         var g = CreateGroup()
         string result = null
 

@@ -5,7 +5,7 @@ class AtLeastOneSpiderAlive implements UnitRequirementPredicate
     static function filter() returns boolean
         return GetFilterUnit().getTypeId() == 'nssp' and GetFilterUnit().isAlive() // Spitting Spider
 
-    function isMet(unit _whichUnit) returns string
+    override function isMet(unit _whichUnit) returns string
         group g = CreateGroup()
         string result = null
 

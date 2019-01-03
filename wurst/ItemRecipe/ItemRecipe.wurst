@@ -97,7 +97,7 @@ public class ItemRecipe
         if not instances.has(index)
             instances.put(index, new LinkedList<ItemRecipe>())
         var recipes = instances.get(index)
-        if not recipes.contains(recipe)
+        if not recipes.has(recipe)
             recipes.push(recipe)
 
     private static function flushRecipe(int index, ItemRecipe recipe)
@@ -463,7 +463,7 @@ function onSmoothPickup()
         destroy items
 
 class SmoothRecipeAssembly implements SmoothPickupPredicate
-    function canPickup(unit whichUnit, item whichItem) returns boolean
+    override function canPickup(unit whichUnit, item whichItem) returns boolean
         return getCheatRecipe(whichUnit, whichItem) != null
 
 init

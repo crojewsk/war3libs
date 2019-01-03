@@ -390,7 +390,7 @@ function onSmoothPickup()
     pickupItem(getSmoothItemPickupUnit(), getSmoothItemPickupItem())
 
 class SmoothChargesStack implements SmoothPickupPredicate
-    function canPickup(unit whichUnit, item whichItem) returns boolean
+    override function canPickup(unit whichUnit, item whichItem) returns boolean
         var itemTypeId = whichItem.getTypeId()
         var result = false
 
