@@ -4,6 +4,7 @@
 *
 *  Easy item charges stacking and splitting.
 */
+
 package StackNSplit
 import RegisterEvents
 import InventoryEvent
@@ -17,6 +18,7 @@ constant eventAddedTrigger = CreateTrigger()
 constant eventRemovedTrigger = CreateTrigger()
 
 constant table = InitHashtable()
+var pickupEventEnabled = true
 
 public enum EVENT_ITEM_CHARGES
     ADDED
@@ -236,6 +238,7 @@ function stackItem(unit u, item itm, item ignored, int withTypeId, int max) retu
                     itm.setCharges(charges)
                     fireEvent(eventRemovedTrigger, eventInfo(u, itm, diff))
                     fireEvent(eventAddedTrigger, eventInfo(u, with, diff))
+
     return charges
 
 /** Attempts to stack provided item for specified unit. */
@@ -246,6 +249,7 @@ public function unit.stackItem(item whichItem) returns boolean
 
     var result = false
     var itemTypeId = whichItem.getTypeId()
+
     if not isItemContainer(itemTypeId)
         if itemHasContainer(itemTypeId)
             for containerType in getItemContainers(itemTypeId)
@@ -255,11 +259,30 @@ public function unit.stackItem(item whichItem) returns boolean
             result = true
 
         if isItemStackable(itemTypeId) and charges > 0
-            stackItem(this, whichItem, whichItem, itemTypeId, getItemMaxStacks(itemTypeId))
+            charges = stackItem(this, whichItem, whichItem, itemTypeId, getItemMaxStacks(itemTypeId))
             result = true
     else
-        stackItem(this, whichItem, whichItem, getItemContainerItem(itemTypeId), getItemContainerMaxStacks(itemTypeId))
+        charges = stackItem(this, whichItem, whichItem, getItemContainerItem(itemTypeId), getItemContainerMaxStacks(itemTypeId))
         result = true
+
+    let maxStack = getItemMaxStacks(itemTypeId)
+    while charges > 0 and isItemStackable(itemTypeId)
+        if charges > maxStack
+            let newItemStack = createItem(itemTypeId, whichItem.getPos())
+            newItemStack.setCharges(maxStack)
+            if not this.isInventoryFull()
+                pickupEventEnabled = false
+                this.addItemHandle(newItemStack)
+                pickupEventEnabled = true
+            charges -= maxStack
+        else
+            whichItem.setCharges(charges)
+            if not this.isInventoryFull()
+                pickupEventEnabled = false
+                this.addItemHandle(whichItem)
+                pickupEventEnabled = true
+            charges = 0
+
     return result
 
 /** Attempts to split provided item for specified unit. */
@@ -338,7 +361,8 @@ function pickupItem(unit u, item itm)
         u.stackItem(itm)
 
 function onPickup()
-    pickupItem(GetTriggerUnit(), GetManipulatedItem())
+    if pickupEventEnabled
+        pickupItem(GetTriggerUnit(), GetManipulatedItem())
 
 function onMoved()
     var slotFrom = getInventorySlotFrom()
@@ -399,6 +423,7 @@ class SmoothChargesStack implements SmoothPickupPredicate
         else if isItemStackable(itemTypeId)
             result = not whichUnit.isItemFullyStacked(itemTypeId)
         return result
+
 
 init
     registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, () -> onPickup())
