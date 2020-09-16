@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    RegisterNativeEvent v1.1.1.3
+*    RegisterNativeEvent v1.1.1.4
 *       by Bannar
 *
 *    Storage of trigger handles for native events.
@@ -46,6 +46,9 @@
 *
 *       function RegisterNativeEvent takes integer whichEvent, code func returns nothing
 *          Registers new event handler func for specified event whichEvent.
+*
+*       function UnregisterNativeEventHandler takes integer whichEvent, triggercondition handler returns nothing
+*          Unregisters specified event handler for event whichEvent. Requires Warcraft 1.30.4+.
 *
 *****************************************************************************/
 library RegisterNativeEvent uses optional Table
@@ -117,6 +120,10 @@ endfunction
 
 function RegisterNativeEvent takes integer whichEvent, code func returns nothing
     call RegisterIndexNativeEvent(bj_MAX_PLAYER_SLOTS, whichEvent, func)
+endfunction
+
+function UnregisterNativeEventHandler takes integer whichEvent, triggercondition handler returns nothing
+    call TriggerRemoveCondition(GetNativeEventTrigger(whichEvent), handler)
 endfunction
 
 endlibrary
