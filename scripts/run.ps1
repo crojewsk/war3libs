@@ -31,7 +31,7 @@ $GeneratedJ  = Join-Path -Path $ScriptPath -ChildPath 'bin\generated.j'
 # Path to base map
 $MapW3X      = Join-Path -Path $ScriptPath -ChildPath 'build1.w3x'
 # Path to output map w3x file to be created after successful build
-$OutputW3X   = Join-Path -Path $ScriptPAth -ChildPath 'bin\ITT2.w3x'
+$OutputW3X   = Join-Path -Path $ScriptPath -ChildPath 'bin\ITT2.w3x'
 
 
 # Create GeneratedJ file from content of all .j and .zn files
