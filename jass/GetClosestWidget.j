@@ -85,7 +85,7 @@ library GetClosestWidget
     private function calcDistance takes real x, real y returns real
         local real dx = x - coordX
         local real dy = y - coordY
-        return ( (dx*dx + dy*dy) / 10000 )
+        return (dx*dx + dy*dy) / 10000
     endfunction
 
     private struct ClosestWidget extends array
@@ -152,7 +152,7 @@ library GetClosestWidget
     private function doEnumUnits takes unit u returns nothing
         local real dist = calcDistance(GetUnitX(u), GetUnitY(u))
 
-        if ( dist < distance ) then
+        if dist < distance then
             set ClosestWidget.unit = u
             set distance = dist
         endif
@@ -168,7 +168,7 @@ library GetClosestWidget
         call Defaults(x, y)
 
         loop
-            if ( r > FINAL_DISTANCE ) then
+            if r > FINAL_DISTANCE then
                 call GroupEnumUnitsInRect(ClosestWidget.group, GetWorldBounds(), filter)
                 exitwhen true
             else
@@ -192,7 +192,7 @@ library GetClosestWidget
         local unit u
         call Defaults(x, y)
 
-        if ( radius >= 0 ) then
+        if radius >= 0 then
             call GroupEnumUnitsInRange(ClosestWidget.group, x, y, radius, filter)
             loop
                 set u = FirstOfGroup(ClosestWidget.group)
@@ -256,10 +256,10 @@ library GetClosestWidget
                 set j = j - 1
             endloop
 
-            if ( lo < j ) then
+            if lo < j then
                 call sortUnits(lo, j)
             endif
-            if ( hi > i ) then
+            if hi > i then
                 call sortUnits(i, hi)
             endif
         endmethod
@@ -267,7 +267,7 @@ library GetClosestWidget
         static method fillGroup takes integer n, group dest returns nothing
             loop
                 exitwhen count <= 0 or sorted[count] == null
-                if ( count <= n ) then
+                if count <= n then
                     call GroupAddUnit(dest, sorted[count])
                 endif
                 set sorted[count] = null
@@ -281,7 +281,7 @@ library GetClosestWidget
         local unit u
         call Defaults(x, y)
 
-        if ( radius >= 0 )then
+        if radius >= 0 then
             call GroupEnumUnitsInRange(ClosestWidget.group, x, y, radius, filter)
             loop
                 set u = FirstOfGroup(ClosestWidget.group)
@@ -312,7 +312,7 @@ library GetClosestWidget
         local $TYPE$ temp = GetEnum$NAME$()
         local real dist = calcDistance(Get$NAME$X(temp), Get$NAME$Y(temp))
 
-        if ( dist < distance ) then
+        if dist < distance then
             set ClosestWidget.$TYPE$ = temp
             set distance = dist
         endif
@@ -325,7 +325,7 @@ library GetClosestWidget
         call Defaults(x, y)
 
         loop
-            if ( r > FINAL_DISTANCE ) then
+            if r > FINAL_DISTANCE then
                 call Enum$NAME$sInRect(GetWorldBounds(), filter, function enum$NAME$s)
                 exitwhen true
             else
@@ -342,7 +342,7 @@ library GetClosestWidget
     function GetClosest$NAME$InRange takes real x, real y, real radius, boolexpr filter returns $TYPE$
         call Defaults(x, y)
 
-        if ( radius > 0 ) then
+        if radius > 0 then
             call SetRect(ClosestWidget.area, x-radius, y-radius, x+radius, y+radius)
             call Enum$NAME$sInRect(ClosestWidget.area, filter, function enum$NAME$s)
         endif
