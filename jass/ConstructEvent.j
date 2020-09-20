@@ -315,7 +315,7 @@ private function OnConstructFinish takes nothing returns nothing
     set u = null
 endfunction
 
-private function OnIndex takes nothing returns nothing
+private function OnIndex takes nothing returns boolean
     local unit u = GetIndexedUnit()
     local integer id = GetUnitTypeId(u)
     local IntegerListItem iter = ongoing.first
@@ -351,9 +351,10 @@ private function OnIndex takes nothing returns nothing
     endif
 
     set u = null
+    return false
 endfunction
 
-private function OnDeindex takes nothing returns nothing
+private function OnDeindex takes nothing returns boolean
     local integer index = GetIndexedUnitId()
 
     if instances[index] != 0 then
@@ -367,6 +368,7 @@ private function OnDeindex takes nothing returns nothing
         set finished[index] = false
         set cancelled[index] = false
     endif
+    return false
 endfunction
 
 private module ConstructEventInit
