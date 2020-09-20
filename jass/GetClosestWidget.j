@@ -85,7 +85,7 @@ library GetClosestWidget
     private function calcDistance takes real x, real y returns real
         local real dx = x - coordX
         local real dy = y - coordY
-        return (dx*dx + dy*dy) / 10000
+        return (dx * dx + dy * dy) / 10000
     endfunction
 
     private struct ClosestWidget extends array
@@ -175,7 +175,7 @@ library GetClosestWidget
                 call GroupEnumUnitsInRange(ClosestWidget.group, x, y, r, filter)
                 exitwhen FirstOfGroup(ClosestWidget.group) != null
             endif
-            set r = 2*r
+            set r = 2 * r
         endloop
 
         loop
@@ -230,7 +230,7 @@ library GetClosestWidget
         static method sortUnits takes integer lo, integer hi returns nothing
             local integer i = lo
             local integer j = hi
-            local real pivot = vector[(lo+hi)/2]
+            local real pivot = vector[(lo + hi) / 2]
 
             loop
                 loop
@@ -329,11 +329,11 @@ library GetClosestWidget
                 call Enum$NAME$sInRect(GetWorldBounds(), filter, function enum$NAME$s)
                 exitwhen true
             else
-                call SetRect(ClosestWidget.area, x-r, y-r, x+r, y+r)
+                call SetRect(ClosestWidget.area, x - r, y - r, x + r, y + r)
                 call Enum$NAME$sInRect(ClosestWidget.area, filter, function enum$NAME$s)
                 exitwhen ClosestWidget.$TYPE$ != null
             endif
-            set r = 2*r
+            set r = 2 * r
         endloop
 
         return ClosestWidget.$TYPE$
@@ -343,7 +343,7 @@ library GetClosestWidget
         call Defaults(x, y)
 
         if radius > 0 then
-            call SetRect(ClosestWidget.area, x-radius, y-radius, x+radius, y+radius)
+            call SetRect(ClosestWidget.area, x - radius, y - radius, x + radius, y + radius)
             call Enum$NAME$sInRect(ClosestWidget.area, filter, function enum$NAME$s)
         endif
 
