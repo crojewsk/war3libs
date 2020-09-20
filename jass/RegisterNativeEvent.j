@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*    RegisterNativeEvent v1.1.1.4
+*    RegisterNativeEvent v1.1.1.5
 *       by Bannar
 *
 *    Storage of trigger handles for native events.
@@ -41,10 +41,10 @@
 *       function CreateNativeEvent takes nothing returns integer
 *          Returns unique id for new event and registers it with RegisterNativeEvent.
 *
-*       function RegisterIndexNativeEvent takes integer whichIndex, integer whichEvent, code func returns nothing
+*       function RegisterIndexNativeEvent takes integer whichIndex, integer whichEvent, code func returns triggercondition
 *          Registers new event handler func for event whichEvent specific to index whichIndex.
 *
-*       function RegisterNativeEvent takes integer whichEvent, code func returns nothing
+*       function RegisterNativeEvent takes integer whichEvent, code func returns triggercondition
 *          Registers new event handler func for specified event whichEvent.
 *
 *       function UnregisterNativeEventHandler takes integer whichEvent, triggercondition handler returns nothing
@@ -113,13 +113,13 @@ function CreateNativeEvent takes nothing returns integer
     return eventId
 endfunction
 
-function RegisterIndexNativeEvent takes integer whichIndex, integer whichEvent, code func returns nothing
+function RegisterIndexNativeEvent takes integer whichIndex, integer whichEvent, code func returns triggercondition
     call RegisterNativeEventTrigger(whichIndex, whichEvent)
-    call TriggerAddCondition(GetIndexNativeEventTrigger(whichIndex, whichEvent), Condition(func))
+    return TriggerAddCondition(GetIndexNativeEventTrigger(whichIndex, whichEvent), Condition(func))
 endfunction
 
-function RegisterNativeEvent takes integer whichEvent, code func returns nothing
-    call RegisterIndexNativeEvent(bj_MAX_PLAYER_SLOTS, whichEvent, func)
+function RegisterNativeEvent takes integer whichEvent, code func returns triggercondition
+    return RegisterIndexNativeEvent(bj_MAX_PLAYER_SLOTS, whichEvent, func)
 endfunction
 
 function UnregisterNativeEventHandler takes integer whichEvent, triggercondition handler returns nothing
