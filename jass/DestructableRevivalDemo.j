@@ -1,3 +1,5 @@
+// Demo requires IsDestructableTree library, example implementation:
+// www.hiveworkshop.com/threads/snippet-isdestructabletree.248054/
 scope DestructableRevivalDemo initializer Init
 
 struct MyRevivalFilter extends array
