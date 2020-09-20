@@ -806,7 +806,7 @@ struct ItemRestriction extends array
         set itm = null
     endmethod
 
-    private static method onDeindex takes nothing returns nothing
+    private static method onDeindex takes nothing returns boolean
         local integer index = GetIndexedUnitId()
         local ItemRestrictionList restrictions = getRestrictions(0)
         local ItemRestrictionListItem iter
@@ -823,6 +823,7 @@ struct ItemRestriction extends array
                 set iter = iter.next
             endloop
         endif
+        return false
     endmethod
 
     implement ItemRestrictionInit
