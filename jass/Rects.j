@@ -138,7 +138,7 @@
 *
 *
 *****************************************************************************/
-library Rects uses Alloc optional Real2D
+library Rects requires Alloc optional Real2D
 
 globals
     private trigger array triggers
