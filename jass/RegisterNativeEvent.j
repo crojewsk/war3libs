@@ -51,7 +51,7 @@
 *          Unregisters specified event handler for event whichEvent. Requires Warcraft 1.30.4+.
 *
 *****************************************************************************/
-library RegisterNativeEvent uses optional Table
+library RegisterNativeEvent requires optional Table
 
 globals
     private integer eventIndex = 500 // 0-499 reserved for Blizzard native events
