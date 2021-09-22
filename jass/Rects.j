@@ -143,8 +143,8 @@ library Rects uses Alloc optional Real2D
 globals
     private trigger array triggers
     // iteration related globals
-    private real argX = 0.0
-    private real argY = 0.0
+    private real argRadius = 0.0
+    private Rects argRect = 0
 endglobals
 
 struct RectsForCellAction extends array
@@ -171,7 +171,20 @@ module RectsForCellActionModule
     private delegate RectsForCellAction parent
 
     private static method onInvoke takes nothing returns nothing
-        call forCell(argX, argY)
+        local real x = argRect.minX
+        local real y
+
+        loop
+            set y = argRect.minY
+            loop
+                call thistype.forCell(x, y)
+                set y = y + argRadius
+                exitwhen y > argRect.maxY
+            endloop
+
+            set x = x + argRadius
+            exitwhen x > argRect.maxX
+        endloop
     endmethod
 
     static method create takes nothing returns thistype
@@ -473,23 +486,9 @@ endif
     endmethod
 
     method forEach takes RectsForCellAction action, real radius returns thistype
-        local real x = minX
-        local real y
-
-        loop
-            set y = minY
-            loop
-                set argX = x
-                set argY = y
-                call TriggerEvaluate(triggers[action])
-
-                set y = y + radius
-                exitwhen y > maxY
-            endloop
-            set x = x + radius
-            exitwhen x > maxX
-        endloop
-
+        set argRadius = radius
+        set argRect = this
+        call TriggerEvaluate(triggers[action])
         return this
     endmethod
 
