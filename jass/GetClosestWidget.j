@@ -192,15 +192,17 @@ library GetClosestWidget
         local unit u
         call Defaults(x, y)
 
-        if radius >= 0 then
-            call GroupEnumUnitsInRange(ClosestWidget.group, x, y, radius, filter)
-            loop
-                set u = FirstOfGroup(ClosestWidget.group)
-                exitwhen u == null
-                call doEnumUnits(u)
-                call GroupRemoveUnit(ClosestWidget.group, u)
-            endloop
-        endif
+        debug if radius < 0 then
+            debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"GetClosestUnitInRange: Invalid radius specified: "+R2S(radius)+".")
+        debug endif
+
+        call GroupEnumUnitsInRange(ClosestWidget.group, x, y, radius, filter)
+        loop
+            set u = FirstOfGroup(ClosestWidget.group)
+            exitwhen u == null
+            call doEnumUnits(u)
+            call GroupRemoveUnit(ClosestWidget.group, u)
+        endloop
 
         return ClosestWidget.unit
     endfunction
@@ -281,18 +283,20 @@ library GetClosestWidget
         local unit u
         call Defaults(x, y)
 
-        if radius >= 0 then
-            call GroupEnumUnitsInRange(ClosestWidget.group, x, y, radius, filter)
-            loop
-                set u = FirstOfGroup(ClosestWidget.group)
-                exitwhen u == null
-                call ClosestWidget.doSaveUnits(u)
-                call GroupRemoveUnit(ClosestWidget.group, u)
-            endloop
+        debug if radius < 0 then
+            debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"GetClosestNUnitsInRange: Invalid radius specified: "+R2S(radius)+".")
+        debug endif
 
-            call ClosestWidget.sortUnits(1, ClosestWidget.count)
-            call ClosestWidget.fillGroup(n, dest)
-        endif
+        call GroupEnumUnitsInRange(ClosestWidget.group, x, y, radius, filter)
+        loop
+            set u = FirstOfGroup(ClosestWidget.group)
+            exitwhen u == null
+            call ClosestWidget.doSaveUnits(u)
+            call GroupRemoveUnit(ClosestWidget.group, u)
+        endloop
+
+        call ClosestWidget.sortUnits(1, ClosestWidget.count)
+        call ClosestWidget.fillGroup(n, dest)
     endfunction
 
     function GetClosestNUnitsInGroup takes real x, real y, integer n, group source, group dest returns nothing
@@ -342,10 +346,12 @@ library GetClosestWidget
     function GetClosest$NAME$InRange takes real x, real y, real radius, boolexpr filter returns $TYPE$
         call Defaults(x, y)
 
-        if radius > 0 then
-            call SetRect(ClosestWidget.area, x - radius, y - radius, x + radius, y + radius)
-            call Enum$NAME$sInRect(ClosestWidget.area, filter, function enum$NAME$s)
-        endif
+        debug if radius < 0 then
+            debug call DisplayTimedTextToPlayer(GetLocalPlayer(),0,0,60,"GetClosest$NAME$InRange: Invalid radius specified: "+R2S(radius)+".")
+        debug endif
+
+        call SetRect(ClosestWidget.area, x - radius, y - radius, x + radius, y + radius)
+        call Enum$NAME$sInRect(ClosestWidget.area, filter, function enum$NAME$s)
 
         return ClosestWidget.$TYPE$
     endfunction
