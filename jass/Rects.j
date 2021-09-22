@@ -33,7 +33,7 @@
 *
 *        | struct MyAction extends array
 *        |     static method forCell takes real x, real y returns nothing
-*        |         return CreateItem('crys', x, y)
+*        |         call CreateItem('crys', x, y)
 *        |     endmethod
 *        |
 *        |     implement RectsForCellActionModule
