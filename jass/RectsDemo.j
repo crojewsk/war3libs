@@ -1,7 +1,14 @@
 library RectsTest requires Rects, Real2D
 
-struct RectsTest extends array
+struct RectsForCellActionTest extends array
+    static method forCell takes real x, real y returns nothing
+        call CreateItem('crys', x, y)
+    endmethod
 
+    implement RectsForCellActionModule
+endstruct
+
+struct RectsTest extends array
     static method draw_rect takes Rects rec, string lightType returns nothing
         call AddLightning(lightType, true, rec.minX, rec.minY, rec.minX, rec.maxY)
         call AddLightning(lightType, true, rec.maxX, rec.minY, rec.maxX, rec.maxY)
@@ -28,6 +35,9 @@ struct RectsTest extends array
         call wait(2)
         call draw_rect(rec, "CLPB")
         call print(5, "Initial rect |c000080FF(blue)|r: " + R2S(rec.minX) + " " + R2S(rec.minY) + " " + R2S(rec.maxX) + " " +R2S(rec.maxY) )
+
+        call rec.forEach(RectsForCellActionTest.create(), 50)
+        call print(5, "\nFilled with Crystal Balls..")
 
         call print(5, "Now, lets create second rect nearby and use it to intersect with our initial one.")
         set rec2 = Rects.create(300, 300, 800, 800)
