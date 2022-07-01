@@ -1,14 +1,71 @@
-$ScriptPath  = Split-Path -Parent $MyInvocation.MyCommand.Definition
+<#
+ Copyright (c) 2018 Cezary Rojewski
 
-$CommonJ     = Join-Path -Path $ScriptPath -ChildPath 'temp\common.j'
-$BlizzardJ   = Join-Path -Path $ScriptPath -ChildPath 'temp\blizzard.j'
-$Jasshelper  = Join-Path -Path $ScriptPath -ChildPath 'jasshelper\jasshelper.exe'
+.SYNOPSIS
+    Compile Jass and Zinc code and inject it into a Warcraft 3 map file.
 
-$War3MapJ    = Join-Path -Path $ScriptPath -ChildPath 'bin\war3map.j'
-$MapW3X      = Join-Path -Path $ScriptPath -ChildPath 'bin\Build.w3x'
-$OutputW3X   = Join-Path -Path $ScriptPAth -ChildPath 'bin\NOTD_Aftermath_1.6.w3x'
+.PARAMETER JassInclude
+    # Location of common.j and blizzard.j files to include.
 
-Copy-Item $MapW3X $OutputW3X -Force
+.PARAMETER JassHelper
+    # Full path specifying location of jasshelper.exe compiler.
 
-$Params = @($CommonJ, $BlizzardJ, $War3MapJ, $OutputW3X)
-& $Jasshelper $Params
+.PARAMETER JassSrc
+    # Root directory containing Jass and Zinc files to compile.
+
+.PARAMETER Output
+    # Map file to inject compiled code into or name of an output file to create.
+    # If Output does not end with '.w3x', then the jasshelper.exe is run with
+    # --scriptonly option.
+
+.EXAMPLE
+    build.ps1 include/ jasshelper.exe src/ output.w3x
+#>
+Param ($JassInclude, $JassHelper, $JassSrc, $Output)
+
+$Usage = 'Usage: build.ps1 JASS_INCLUDE JASS_HELPER JASS_SRC OUTPUT'
+
+If (!$JassInclude -or !$JassHelper -or !$JassSrc -or !$Output)
+{
+    Write-Host $Usage
+    return
+}
+
+$CommonJ = Join-Path -Path $JassInclude -ChildPath 'common.j'
+$BlizzardJ = Join-Path -Path $JassInclude -ChildPath 'blizzard.j'
+$TemporaryJ = ".tmp.j"
+
+try
+{
+    $AllSrcFiles = Get-ChildItem -Path $JassSrc -Include *.j, *.zn -Recurse -ErrorAction Stop
+    New-Item $TemporaryJ -ItemType File -Force -ErrorAction Stop
+}
+catch [System.Exception]
+{
+    Write-Host $PSItem.Exception.Message
+}
+
+# Fill TemporaryJ with content of all .j and .zn files
+ForEach ($File in $AllSrcFiles)
+{
+    If ($File.Extension -eq '.zn')
+    {
+        Add-Content -Path $TemporaryJ -Value "//! zinc"
+        Get-Content -Path $File | Add-Content $TemporaryJ
+        Add-Content -Path $TemporaryJ -Value "//! endzinc"
+    }
+    Else
+    {
+        Get-Content -Path $File | Add-Content $TemporaryJ
+    }
+}
+
+$JassHelperArgs = @("""$CommonJ""", """$BlizzardJ""", $TemporaryJ, """$Output""")
+If (!$Output.EndsWith('.w3x'))
+{
+    $JassHelperArgs = "--scriptonly " + $JassHelperArgs
+}
+
+Start-Process -NoNewWindow -FilePath $JassHelper -ArgumentList $JassHelperArgs -Wait
+# Temporary file no longer needed
+Remove-Item $TemporaryJ
