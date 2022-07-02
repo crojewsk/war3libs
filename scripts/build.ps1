@@ -35,10 +35,17 @@ $MainJ = "war3map.j"
 $BuildDir = "build"
 $IncludeDir = "..\include"
 $SrcDir = "..\src"
+$TestMap = "..\ExampleMap.w3x"
+
+If (!(Test-Path -PathType Container $BuildDir))
+{
+    New-Item $BuildDir -ItemType Directory
+}
 
 try
 {
     Set-Location -Path $BuildDir -ErrorAction Stop
+    Copy-Item -Path $TestMap -Force
 
     # Map initialization functions are to be placed at the bottom
     $AllSrcFiles = Get-ChildItem -Path $IncludeDir -Include *.j, *.zn -Exclude $MainJ -Recurse -ErrorAction Stop
