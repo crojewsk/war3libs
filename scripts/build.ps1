@@ -4,7 +4,7 @@
 .SYNOPSIS
     Compile Jass and Zinc code and inject it into a Warcraft 3 map file.
 
-.PARAMETER JassInclude
+.PARAMETER JassNatives
     # Location of common.j and blizzard.j files to include.
 
 .PARAMETER JassHelper
@@ -16,20 +16,20 @@
     # --scriptonly option.
 
 .EXAMPLE
-    build.ps1 include/ jasshelper.exe output.w3x
+    build.ps1 natives/ jasshelper.exe output.w3x
 #>
-Param ($JassInclude, $JassHelper, $Output)
+Param ($JassNatives, $JassHelper, $Output)
 
-$Usage = 'Usage: build.ps1 JASS_INCLUDE JASS_HELPER OUTPUT'
+$Usage = 'Usage: build.ps1 JASS_NATIVES JASS_HELPER OUTPUT'
 
-If (!$JassInclude -or !$JassHelper -or !$Output)
+If (!$JassNatives -or !$JassHelper -or !$Output)
 {
     Write-Host $Usage
     return
 }
 
-$CommonJ = Join-Path -Path $JassInclude -ChildPath 'common.j'
-$BlizzardJ = Join-Path -Path $JassInclude -ChildPath 'blizzard.j'
+$CommonJ = Join-Path -Path $JassNatives -ChildPath 'common.j'
+$BlizzardJ = Join-Path -Path $JassNatives -ChildPath 'blizzard.j'
 $TemporaryJ = ".tmp.j"
 $MainJ = "war3map.j"
 $BuildDir = "build"
