@@ -1,10 +1,1 @@
 .vscode/settings.json
-/_build
-/imports
-/wurst/war3map.j
-wurst.build
-wurst.dependencies
-wurst_run.args
-scripts/backups
-scripts/logs
-/wurst/InitDemos.wurst
