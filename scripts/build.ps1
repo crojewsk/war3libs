@@ -49,6 +49,7 @@ try
 catch [System.Exception]
 {
     Write-Host $PSItem.Exception.Message
+    return
 }
 
 # Fill TemporaryJ with content of all .j and .zn files
